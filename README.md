@@ -23,6 +23,8 @@ Widgetizr lets you place web-powered widgets directly on your desktop background
 - **Time Tracker**
 - **Server Monitor**
 
+![Clock widget](website/screenshots/clock.png) ![Todo widget](website/screenshots/todo.png) ![Notes widget](website/screenshots/notes.png) ![Time Tracker widget](website/screenshots/time-tracker.png) ![Server Monitor widget](website/screenshots/server-monitor.png)
+
 ## Supported Environments
 
 Widgetizr currently targets **X11 sessions on Linux**.
