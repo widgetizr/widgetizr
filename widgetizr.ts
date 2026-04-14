@@ -2325,30 +2325,32 @@ const WidgetWindow = GObject.registerClass(
           type = "unknown";
       }
 
-      const changedPath = changedFile.get_path() ?? "";
+      const prefix = basePath + "/";
+      const isRenameEvent =
+        eventType === Gio.FileMonitorEvent.RENAMED ||
+        eventType === Gio.FileMonitorEvent.MOVED;
+      const currentFile = isRenameEvent && otherFile ? otherFile : changedFile;
+      const previousFile = isRenameEvent && otherFile ? changedFile : null;
+
+      const currentPath = currentFile.get_path() ?? "";
       const isDir =
-        changedFile.query_file_type(Gio.FileQueryInfoFlags.NONE, null) ===
+        currentFile.query_file_type(Gio.FileQueryInfoFlags.NONE, null) ===
         Gio.FileType.DIRECTORY;
       const changedHandle = this.fs_newHandle(
         isDir ? "dir" : "file",
-        changedPath,
+        currentPath,
       );
 
-      const prefix = basePath + "/";
-      const relPath = changedPath.startsWith(prefix)
-        ? changedPath.slice(prefix.length).split("/")
+      const relPath = currentPath.startsWith(prefix)
+        ? currentPath.slice(prefix.length).split("/")
         : [changedHandle.name];
 
       let relMovedFrom: string[] | null = null;
-      if (
-        otherFile &&
-        (eventType === Gio.FileMonitorEvent.RENAMED ||
-          eventType === Gio.FileMonitorEvent.MOVED)
-      ) {
-        const otherPath = otherFile.get_path() ?? "";
-        relMovedFrom = otherPath.startsWith(prefix)
-          ? otherPath.slice(prefix.length).split("/")
-          : [GLib.path_get_basename(otherPath)];
+      if (previousFile) {
+        const previousPath = previousFile.get_path() ?? "";
+        relMovedFrom = previousPath.startsWith(prefix)
+          ? previousPath.slice(prefix.length).split("/")
+          : [GLib.path_get_basename(previousPath)];
       }
 
       const payload = JSON.stringify({
