@@ -30,15 +30,18 @@ The script builds the screenshot image, runs the capture process in Docker, moun
 
 Screenshots are saved to `website/screenshots/`:
 
-| File                 | Widget         | Capture size |
-| -------------------- | -------------- | ------------ |
-| `clock.png`          | Clock          | 192×244      |
-| `notes.png`          | Notes          | 232×340      |
-| `todo.png`           | Todo           | 292×300      |
-| `time-tracker.png`   | Time Tracker   | 230×380      |
-| `server-monitor.png` | Server Monitor | 292×340      |
+| File                  | Content              | Capture size      |
+| --------------------- | -------------------- | ----------------- |
+| `clock.png`           | Clock widget         | 192×244           |
+| `notes.png`           | Notes widget         | 232×340           |
+| `todo.png`            | Todo widget          | 292×300           |
+| `time-tracker.png`    | Time Tracker widget  | 230×380           |
+| `server-monitor.png`  | Server Monitor widget| 292×340           |
+| `desktop-mockup.png`  | Full desktop mockup  | 1040px wide       |
 
 All images are generated at device scale factor `2`.
+
+`desktop-mockup.png` is captured last, after all individual widget screenshots exist, by loading the website landing page and screenshotting the `.mockup-outer` element.
 
 ## Demo data
 
@@ -62,7 +65,7 @@ Re-run the screenshot tooling whenever:
 
 - widget HTML/CSS changes
 - demo content changes
-- landing page mockup composition changes
+- landing page mockup composition or styling changes
 - capture sizes or framing are adjusted
 
 ## Related files

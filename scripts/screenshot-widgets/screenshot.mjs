@@ -4,10 +4,12 @@ import fs from "fs";
 import path from "path";
 
 const WIDGETS_DIR = process.env.WIDGETS_DIR;
+const WEBSITE_DIR = process.env.WEBSITE_DIR;
 const OUT_DIR = process.env.OUT_DIR;
 const PORT = 3000;
 
 if (!WIDGETS_DIR) throw new Error("WIDGETS_DIR env var required");
+if (!WEBSITE_DIR) throw new Error("WEBSITE_DIR env var required");
 if (!OUT_DIR) throw new Error("OUT_DIR env var required");
 
 const MIME = {
@@ -124,6 +126,25 @@ const SERVER_MONITOR_METRICS = {
   },
 };
 
+function serveFile(res, filePath, rootDir) {
+  if (!filePath.startsWith(path.resolve(rootDir))) {
+    res.writeHead(403);
+    res.end("Forbidden");
+    return;
+  }
+  const ext = path.extname(filePath).toLowerCase();
+  const mime = MIME[ext] || "application/octet-stream";
+  fs.readFile(filePath, (err, data) => {
+    if (err) {
+      res.writeHead(404);
+      res.end("Not found");
+      return;
+    }
+    res.writeHead(200, { "Content-Type": mime });
+    res.end(data);
+  });
+}
+
 function startServer() {
   return new Promise((resolve, reject) => {
     const server = http.createServer((req, res) => {
@@ -138,27 +159,16 @@ function startServer() {
       }
 
       const urlPath = decodeURIComponent(reqUrl.pathname);
-      const safePath = urlPath === "/" ? "/index.html" : urlPath;
-      const filePath = path.resolve(path.join(WIDGETS_DIR, safePath));
 
-      if (!filePath.startsWith(path.resolve(WIDGETS_DIR))) {
-        res.writeHead(403);
-        res.end("Forbidden");
-        return;
+      if (urlPath.startsWith("/website/")) {
+        const safePath = urlPath.slice("/website".length) || "/index.html";
+        const filePath = path.resolve(path.join(WEBSITE_DIR, safePath));
+        return serveFile(res, filePath, WEBSITE_DIR);
       }
 
-      const ext = path.extname(filePath).toLowerCase();
-      const mime = MIME[ext] || "application/octet-stream";
-
-      fs.readFile(filePath, (err, data) => {
-        if (err) {
-          res.writeHead(404);
-          res.end("Not found");
-          return;
-        }
-        res.writeHead(200, { "Content-Type": mime });
-        res.end(data);
-      });
+      const safePath = urlPath === "/" ? "/index.html" : urlPath;
+      const filePath = path.resolve(path.join(WIDGETS_DIR, safePath));
+      return serveFile(res, filePath, WIDGETS_DIR);
     });
 
     server.listen(PORT, () => resolve(server));
@@ -389,6 +399,29 @@ const WIDGETS = [
   },
 ];
 
+async function screenshotDesktopMockup(browser, outFile) {
+  console.log("Screenshotting desktop mockup...");
+  const context = await browser.newContext({
+    viewport: { width: 1200, height: 800 },
+    deviceScaleFactor: 2,
+    colorScheme: "dark",
+  });
+  const page = await context.newPage();
+  await page.goto(`http://localhost:${PORT}/website/index.html`, {
+    waitUntil: "networkidle",
+  });
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll(".wgt")].every(
+      (img) => img.complete && img.naturalWidth > 0,
+    ),
+  );
+  await waitForStableFrame(page, 300);
+  const mockup = page.locator(".mockup-outer").first();
+  await mockup.screenshot({ path: outFile });
+  console.log(`  -> ${outFile}`);
+  await context.close();
+}
+
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
@@ -423,6 +456,11 @@ async function main() {
 
       await context.close();
     }
+
+    await screenshotDesktopMockup(
+      browser,
+      path.join(OUT_DIR, "desktop-mockup.png"),
+    );
   } finally {
     await browser.close();
     server.close();
