@@ -1,0 +1,8 @@
+{
+  "name": "screenshot-widgets",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "playwright": "latest"
+  }
+}

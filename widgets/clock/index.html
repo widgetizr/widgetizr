@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Clock</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #1e1e2e;
+        color: #cdd6f4;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        user-select: none;
+      }
+
+      /* ── Analog clock ─────────────────────────────────────────────── */
+      .clock-wrap {
+        position: relative;
+        width: 160px;
+        height: 160px;
+      }
+
+      canvas#analog {
+        display: block;
+        width: 160px;
+        height: 160px;
+      }
+
+      /* ── Digital readout ──────────────────────────────────────────── */
+      .digital {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .time {
+        font-size: 36px;
+        font-weight: 200;
+        letter-spacing: 4px;
+        color: #cdd6f4;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+      }
+
+      .time .colon {
+        display: inline-block;
+        transition: opacity 0.08s;
+      }
+
+      .date {
+        font-size: 12px;
+        font-weight: 400;
+        letter-spacing: 1.5px;
+        text-transform: uppercase;
+        color: #a6adc8;
+      }
+
+      .timezone {
+        font-size: 10px;
+        letter-spacing: 1px;
+        color: #7f849c;
+        text-transform: uppercase;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="clock-wrap">
+      <canvas id="analog" width="320" height="320"></canvas>
+    </div>
+
+    <div class="digital">
+      <div class="time" id="time">
+        <span id="hh">00</span><span class="colon">:</span
+        ><span id="mm">00</span><span class="colon">:</span
+        ><span id="ss">00</span>
+      </div>
+      <div class="date" id="date">Monday, 1 January 2024</div>
+      <div class="timezone" id="tz">UTC+0</div>
+    </div>
+
+    <script>
+      "use strict";
+
+      const canvas = document.getElementById("analog");
+      const ctx = canvas.getContext("2d");
+      const SIZE = canvas.width; // 320 (hi-dpi friendly)
+      const CX = SIZE / 2;
+      const CR = SIZE / 2 - 12; // clock face radius
+
+      const DAYS = [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+      ];
+      const MONTHS = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
+
+      function pad(n) {
+        return String(n).padStart(2, "0");
+      }
+
+      function drawFace() {
+        // Outer ring glow
+        const grad = ctx.createRadialGradient(CX, CX, CR * 0.75, CX, CX, CR);
+        grad.addColorStop(0, "rgba(49, 50, 68, 0)");
+        grad.addColorStop(1, "rgba(180, 190, 254, 0.08)");
+
+        ctx.beginPath();
+        ctx.arc(CX, CX, CR, 0, Math.PI * 2);
+        ctx.fillStyle = "#313244";
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(CX, CX, CR, 0, Math.PI * 2);
+        ctx.strokeStyle = "#45475a";
+        ctx.lineWidth = 4;
+        ctx.stroke();
+
+        // Hour tick marks
+        for (let i = 0; i < 60; i++) {
+          const angle = (i / 60) * Math.PI * 2 - Math.PI / 2;
+          const isHour = i % 5 === 0;
+          const inner = CR - (isHour ? 20 : 10);
+          const outer = CR - 4;
+
+          ctx.beginPath();
+          ctx.moveTo(
+            CX + Math.cos(angle) * inner,
+            CX + Math.sin(angle) * inner,
+          );
+          ctx.lineTo(
+            CX + Math.cos(angle) * outer,
+            CX + Math.sin(angle) * outer,
+          );
+          ctx.strokeStyle = isHour ? "#585b70" : "#45475a";
+          ctx.lineWidth = isHour ? 2.5 : 1;
+          ctx.stroke();
+        }
+
+        // Hour numbers
+        ctx.font = "bold 18px system-ui, sans-serif";
+        ctx.fillStyle = "#6c7086";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        for (let h = 1; h <= 12; h++) {
+          const angle = (h / 12) * Math.PI * 2 - Math.PI / 2;
+          const r = CR - 36;
+          ctx.fillText(
+            String(h),
+            CX + Math.cos(angle) * r,
+            CX + Math.sin(angle) * r,
+          );
+        }
+      }
+
+      function drawHand(angle, length, width, color, lineCap = "round") {
+        ctx.save();
+        ctx.translate(CX, CX);
+        ctx.rotate(angle);
+        ctx.beginPath();
+        ctx.moveTo(0, length * 0.18); // small counter-weight tail
+        ctx.lineTo(0, -length);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = width;
+        ctx.lineCap = lineCap;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawCenter() {
+        // Outer pin ring
+        ctx.beginPath();
+        ctx.arc(CX, CX, 8, 0, Math.PI * 2);
+        ctx.fillStyle = "#585b70";
+        ctx.fill();
+
+        // Inner dot
+        ctx.beginPath();
+        ctx.arc(CX, CX, 4, 0, Math.PI * 2);
+        ctx.fillStyle = "#f38ba8";
+        ctx.fill();
+      }
+
+      function tick() {
+        const now = new Date();
+        const secs = now.getSeconds() + now.getMilliseconds() / 1000;
+        const mins = now.getMinutes() + secs / 60;
+        const hrs = (now.getHours() % 12) + mins / 60;
+
+        // ── Analog ──────────────────────────────────────────────────────
+        ctx.clearRect(0, 0, SIZE, SIZE);
+        drawFace();
+
+        // Hour hand
+        drawHand((hrs / 12) * Math.PI * 2, CR * 0.5, 6, "#cdd6f4");
+        // Minute hand
+        drawHand((mins / 60) * Math.PI * 2, CR * 0.72, 4, "#a6adc8");
+        // Second hand
+        drawHand((secs / 60) * Math.PI * 2, CR * 0.8, 2, "#f38ba8", "round");
+
+        drawCenter();
+
+        // ── Digital ─────────────────────────────────────────────────────
+        document.getElementById("hh").textContent = pad(now.getHours());
+        document.getElementById("mm").textContent = pad(now.getMinutes());
+        document.getElementById("ss").textContent = pad(now.getSeconds());
+
+        const colonOpacity = now.getMilliseconds() < 500 ? 1 : 0.15;
+        document
+          .querySelectorAll(".colon")
+          .forEach((el) => (el.style.opacity = colonOpacity));
+
+        document.getElementById("date").textContent =
+          DAYS[now.getDay()] +
+          ", " +
+          now.getDate() +
+          " " +
+          MONTHS[now.getMonth()] +
+          " " +
+          now.getFullYear();
+
+        // Timezone label (e.g. "UTC+2" or "UTC-5:30")
+        const offsetMins = -now.getTimezoneOffset();
+        const sign = offsetMins >= 0 ? "+" : "-";
+        const absH = Math.floor(Math.abs(offsetMins) / 60);
+        const absM = Math.abs(offsetMins) % 60;
+        document.getElementById("tz").textContent =
+          "UTC" + sign + absH + (absM ? ":" + pad(absM) : "");
+
+        scheduleNext();
+      }
+
+      function scheduleNext() {
+        const delay = 1000 - (Date.now() % 1000);
+        setTimeout(tick, delay);
+      }
+
+      scheduleNext();
+    </script>
+  </body>
+</html>

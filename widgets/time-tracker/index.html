@@ -1,0 +1,1726 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Time Tracker</title>
+    <link rel="stylesheet" href="../shared/theme.css" />
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="../shared/toolbar.css" />
+    <link rel="stylesheet" href="../shared/statusbar.css" />
+    <link rel="stylesheet" href="../shared/modal.css" />
+    <link rel="stylesheet" href="../shared/buttons.css" />
+    <link rel="stylesheet" href="../shared/empty-state.css" />
+    <style>
+      #timer-area {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 14px;
+        padding: 22px 16px 18px;
+        flex-shrink: 0;
+      }
+
+      #project-badge {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      #project-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--muted);
+        flex-shrink: 0;
+        transition: background 0.2s;
+      }
+
+      #timer-display {
+        font-size: 46px;
+        font-weight: 200;
+        letter-spacing: 4px;
+        font-variant-numeric: tabular-nums;
+        line-height: 1;
+        color: var(--text);
+        transition: color 0.2s;
+      }
+      #timer-display.running {
+        color: var(--text);
+      }
+
+      #toggle-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 30px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        font-size: 13px;
+        font-weight: 600;
+        font-family: inherit;
+        cursor: pointer;
+        transition:
+          background 0.15s,
+          border-color 0.15s,
+          color 0.15s,
+          transform 0.08s;
+        flex-shrink: 0;
+      }
+      #toggle-btn:active {
+        transform: scale(0.96);
+      }
+      #toggle-btn.idle {
+        background: var(--accent);
+        color: var(--on-accent);
+        border-color: var(--accent);
+      }
+      #toggle-btn.idle:hover {
+        background: var(--accent-h);
+        border-color: var(--accent-h);
+      }
+      #toggle-btn.running {
+        background: transparent;
+        color: var(--danger);
+        border-color: var(--danger);
+      }
+      #toggle-btn.running:hover {
+        background: var(--danger);
+        color: var(--on-accent);
+      }
+
+      #other-running-notice {
+        font-size: 10px;
+        color: var(--warn);
+        letter-spacing: 0.03em;
+        min-height: 14px;
+      }
+
+      .section-label {
+        padding: 6px 10px 4px;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        border-top: 1px solid var(--border);
+        flex-shrink: 0;
+      }
+
+      #no-projects {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        flex: 1;
+        color: var(--muted);
+        text-align: center;
+        padding: 20px;
+      }
+      #no-projects .icon {
+        font-size: 36px;
+        line-height: 1;
+      }
+      #no-projects p {
+        font-size: 12px;
+        line-height: 1.6;
+        max-width: 180px;
+      }
+
+      #color-picker {
+        display: flex;
+        gap: 7px;
+        flex-wrap: wrap;
+      }
+
+      .color-swatch {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition:
+          transform 0.1s,
+          border-color 0.12s;
+        flex-shrink: 0;
+      }
+      .color-swatch:hover {
+        transform: scale(1.2);
+      }
+      .color-swatch.selected {
+        border-color: var(--text);
+      }
+
+      #log-section {
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        overflow: hidden;
+        min-height: 0;
+      }
+      #log-wrap {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+      }
+      #btn-show-older {
+        flex-shrink: 0;
+        width: 100%;
+        background: transparent;
+        border: none;
+        border-top: 1px solid var(--border);
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 11px;
+        font-family: inherit;
+        padding: 8px;
+        text-align: center;
+        transition:
+          color 0.15s,
+          background 0.15s;
+        display: none;
+      }
+      #btn-show-older:hover {
+        color: var(--text);
+        background: var(--surface);
+      }
+
+      .day-block {
+        border-bottom: 1px solid var(--border);
+      }
+      .day-block:last-child {
+        border-bottom: none;
+      }
+      .day-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 10px;
+        cursor: pointer;
+        transition: background 0.12s;
+        user-select: none;
+      }
+      .day-header:hover {
+        background: var(--surface);
+      }
+      .day-label {
+        flex: 1;
+        font-size: 11px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      .day-total {
+        font-size: 11px;
+        font-variant-numeric: tabular-nums;
+        color: var(--muted);
+        flex-shrink: 0;
+      }
+      .day-total.live {
+        color: var(--accent);
+      }
+      .day-chevron {
+        font-size: 9px;
+        color: var(--muted);
+        flex-shrink: 0;
+        width: 10px;
+        text-align: center;
+      }
+
+      .day-sessions {
+        padding-bottom: 3px;
+      }
+      .session-row {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 4px 10px 4px 22px;
+        font-size: 11px;
+      }
+      .session-range {
+        font-variant-numeric: tabular-nums;
+        color: var(--muted);
+        flex-shrink: 0;
+        min-width: 96px;
+      }
+      .session-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .session-name {
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .session-dur {
+        font-variant-numeric: tabular-nums;
+        color: var(--muted);
+        flex-shrink: 0;
+      }
+      .session-dur.live {
+        color: var(--accent);
+      }
+      .empty-day {
+        padding: 6px 22px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      #no-file-state {
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        flex: 1;
+        color: var(--muted);
+        text-align: center;
+        padding: 20px;
+      }
+      #no-file-state .icon {
+        font-size: 36px;
+        line-height: 1;
+      }
+      #no-file-state p {
+        font-size: 12px;
+        line-height: 1.6;
+        max-width: 180px;
+      }
+
+      #stale-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: var(--overlay);
+        align-items: center;
+        justify-content: center;
+        z-index: 100;
+      }
+      #stale-overlay.visible {
+        display: flex;
+      }
+      #stale-modal {
+        background: var(--surface);
+        border: 1px solid var(--border-hi);
+        border-radius: 10px;
+        padding: 20px;
+        width: min(320px, 90%);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      #stale-modal h3 {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text);
+      }
+      #stale-desc {
+        font-size: 12px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      #stale-stop-at-wrap {
+        display: none;
+        flex-direction: column;
+        gap: 6px;
+      }
+      #stale-stop-at-wrap label {
+        font-size: 11px;
+        color: var(--muted);
+      }
+      #stale-stop-at-input {
+        background: var(--border);
+        border: 1px solid var(--border-hi);
+        border-radius: var(--radius);
+        color: var(--text);
+        padding: 7px 10px;
+        font-size: 12px;
+        font-family: inherit;
+        width: 100%;
+        outline: none;
+        transition: border-color 0.15s;
+        box-sizing: border-box;
+      }
+      #stale-stop-at-input:focus {
+        border-color: var(--accent);
+      }
+      #stale-error {
+        font-size: 11px;
+        color: var(--danger);
+        display: none;
+      }
+      #stale-error.visible {
+        display: block;
+      }
+      #stale-modal .modal-actions {
+        display: flex;
+        gap: 6px;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="toolbar">
+      <select
+        id="project-select"
+        class="toolbar-select"
+        title="Select project"
+      ></select>
+      <button class="icon-btn" id="btn-new" title="New project">＋</button>
+      <button class="icon-btn danger" id="btn-delete" title="Delete project">
+        🗑
+      </button>
+      <button class="icon-btn" id="btn-file" title="Open file">📄</button>
+    </div>
+
+    <div id="timer-area" style="display: none">
+      <div id="project-badge">
+        <span id="project-dot"></span>
+        <span id="project-name-label">—</span>
+      </div>
+      <div id="timer-display">00:00:00</div>
+      <button id="toggle-btn" class="idle">▶ Start</button>
+      <span id="other-running-notice"></span>
+    </div>
+
+    <div id="no-projects" style="display: none">
+      <div class="icon">⏱</div>
+      <p>No projects yet.<br />Click ＋ to create your first project.</p>
+    </div>
+
+    <div id="log-section" style="display: none">
+      <div class="section-label">Log</div>
+      <div id="log-wrap"></div>
+      <button id="btn-show-older">Show older</button>
+    </div>
+
+    <div id="no-file-state" style="display: none">
+      <div class="icon">📄</div>
+      <p>Open a .txt file to store your time tracking data.</p>
+    </div>
+
+    <div id="statusbar">
+      <span id="statusbar-left"></span>
+      <span id="statusbar-file"></span>
+      <span id="statusbar-right"></span>
+    </div>
+
+    <div id="modal-overlay">
+      <div id="modal">
+        <h3>New Project</h3>
+        <div class="modal-field">
+          <label>Name</label>
+          <input
+            id="modal-name"
+            class="modal-input"
+            type="text"
+            placeholder="Project name…"
+            maxlength="40"
+            autocomplete="off"
+          />
+        </div>
+        <div class="modal-field">
+          <label>Color</label>
+          <div id="color-picker"></div>
+        </div>
+        <p class="modal-error" id="modal-error"></p>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+          <button class="btn btn-primary" id="modal-confirm">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="stale-overlay">
+      <div id="stale-modal">
+        <h3>Unfinished session</h3>
+        <p id="stale-desc"></p>
+        <div id="stale-stop-at-wrap">
+          <label>Stop time</label>
+          <input id="stale-stop-at-input" type="datetime-local" />
+        </div>
+        <p id="stale-error"></p>
+        <div class="modal-actions">
+          <button class="btn btn-danger btn-sm" id="btn-stale-discard">
+            Discard
+          </button>
+          <button class="btn btn-secondary btn-sm" id="btn-stale-stop-at">
+            Stop at…
+          </button>
+          <button class="btn btn-secondary btn-sm" id="btn-stale-stop-now">
+            Stop now
+          </button>
+          <button class="btn btn-primary btn-sm" id="btn-stale-resume">
+            Resume
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../shared/shared.js"></script>
+    <script>
+      "use strict";
+
+      class ParseError extends Error {
+        constructor(msg) {
+          super(msg);
+          this.name = "ParseError";
+        }
+      }
+
+      const idb = makeIdb("widgetizr-timetracker");
+
+      const COLORS = [
+        "#89b4fa",
+        "#a6e3a1",
+        "#cba6f7",
+        "#fab387",
+        "#f38ba8",
+        "#f9e2af",
+        "#94e2d5",
+        "#89dceb",
+        "#f5c2e7",
+        "#b4befe",
+      ];
+
+      const HEADER1 = "// WIDGETIZR TIME TRACKER STORAGE FILE V1";
+      const HEADER2 =
+        "// This file follows the Widgetizr Time Tracker Storage Spec V1, documented at https://widgetizr.app/w/time-tracker/spec/time-tracker-v1.md. Manual edits that violate the spec will cause this file to be rejected by the widget.";
+
+      let projects = [];
+      let sessions = [];
+      let active = null;
+      let fileHandle = null;
+      let midnightTimer = null;
+      let tickHandle = null;
+      let selectedColorIdx = 0;
+      let visibleDays = 30;
+      let expandedDays = new Set();
+      let staleStopAtMode = false;
+      let projectBlocks = [];
+      let logBlocks = [];
+      let preProjectsComments = [];
+      let fileObserver = null;
+      let lastWrittenContent = "";
+      let selectedProjectName = null;
+
+      function roundMinute(ms) {
+        return Math.floor(ms / 60000) * 60000;
+      }
+
+      function dateKey(ms) {
+        const d = new Date(ms);
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+      }
+
+      function formatDT(ms) {
+        const d = new Date(ms);
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+
+      function formatTimeOnly(ms) {
+        const d = new Date(ms);
+        return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+
+      function toDatetimeLocal(ms) {
+        const d = new Date(ms);
+        return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+      }
+
+      function parseDatetimeLocal(val) {
+        if (!val) return NaN;
+        const m = val.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+        if (!m) return NaN;
+        const [, y, mo, d, h, mi] = m.map(Number);
+        return new Date(y, mo - 1, d, h, mi, 0, 0).getTime();
+      }
+
+      function selectedId() {
+        return document.getElementById("project-select").value || null;
+      }
+
+      function parseFile(text) {
+        const lines = text
+          .replace(/\r\n/g, "\n")
+          .replace(/\r/g, "\n")
+          .split("\n");
+
+        if (!lines[0] || lines[0] !== HEADER1)
+          throw new ParseError(`Line 1: must be exactly: ${HEADER1}`);
+        if (!lines[1] || lines[1] !== HEADER2)
+          throw new ParseError(`Line 2: must be exactly: ${HEADER2}`);
+
+        let projectsLine = -1,
+          logLine = -1,
+          projectsCount = 0,
+          logCount = 0;
+        for (let i = 2; i < lines.length; i++) {
+          const t = lines[i].trim();
+          if (t === "[projects]") {
+            projectsCount++;
+            if (projectsCount > 1)
+              throw new ParseError(
+                `Line ${i + 1}: duplicate [projects] section`,
+              );
+            if (logLine !== -1)
+              throw new ParseError(
+                `Line ${i + 1}: [projects] section appears after [log]`,
+              );
+            projectsLine = i;
+          } else if (t === "[log]") {
+            logCount++;
+            if (logCount > 1)
+              throw new ParseError(`Line ${i + 1}: duplicate [log] section`);
+            logLine = i;
+          }
+        }
+        if (projectsLine === -1)
+          throw new ParseError("Missing [projects] section");
+        if (logLine === -1) throw new ParseError("Missing [log] section");
+
+        const parsedPreProjectsComments = [];
+        for (let i = 2; i < projectsLine; i++)
+          parsedPreProjectsComments.push(lines[i]);
+
+        const parsedProjectBlocks = [];
+        const parsedProjects = [];
+        const nameSet = new Set();
+
+        for (let i = projectsLine + 1; i < logLine; i++) {
+          const raw = lines[i];
+          const trimmed = raw.trim();
+          if (!trimmed || trimmed.startsWith("//")) {
+            parsedProjectBlocks.push({ type: "pass", text: raw });
+            continue;
+          }
+          const tokens = trimmed.split(/\s+/);
+          const colorToken = tokens[tokens.length - 1];
+          if (!/^#[0-9a-fA-F]{6}$/.test(colorToken))
+            throw new ParseError(
+              `Line ${i + 1}: invalid or missing color token "${colorToken}" (must be #rrggbb)`,
+            );
+          const name = tokens.slice(0, -1).join(" ");
+          if (!name) throw new ParseError(`Line ${i + 1}: empty project name`);
+          if (name.length > 40)
+            throw new ParseError(
+              `Line ${i + 1}: project name too long (max 40 characters)`,
+            );
+          const nameLower = name.toLowerCase();
+          if (nameSet.has(nameLower))
+            throw new ParseError(
+              `Line ${i + 1}: duplicate project name "${name}"`,
+            );
+          nameSet.add(nameLower);
+          const proj = { id: uid(), name, color: colorToken };
+          parsedProjects.push(proj);
+          parsedProjectBlocks.push({ type: "project", id: proj.id });
+        }
+
+        const parsedLogBlocks = [];
+        const parsedSessions = [];
+        let parsedActive = null;
+        let prevStartMs = -Infinity,
+          prevEndMs = -Infinity,
+          activeCount = 0;
+
+        for (let i = logLine + 1; i < lines.length; i++) {
+          const raw = lines[i];
+          const trimmed = raw.trim();
+          if (!trimmed || trimmed.startsWith("//")) {
+            parsedLogBlocks.push({ type: "pass", text: raw });
+            continue;
+          }
+
+          const allTokens = trimmed.split(/\s+/);
+          if (allTokens.length < 5)
+            throw new ParseError(
+              `Line ${i + 1}: log line has fewer than 5 whitespace tokens`,
+            );
+          const splitIdx = trimmed.search(/  +/);
+          if (splitIdx === -1)
+            throw new ParseError(
+              `Line ${i + 1}: project name must be separated from time range by 2+ spaces`,
+            );
+          const timePart = trimmed.slice(0, splitIdx).trim();
+          const projName = trimmed.slice(splitIdx).trim();
+          const timeTokens = timePart.split(/\s+/);
+          if (timeTokens.length !== 4)
+            throw new ParseError(
+              `Line ${i + 1}: expected "YYYY-MM-DD HH:MM - HH:MM" in time part, got "${timePart}"`,
+            );
+          const [dateStr, startTimeStr, dash, endTimeStr] = timeTokens;
+          if (dash !== "-")
+            throw new ParseError(
+              `Line ${i + 1}: expected '-' separator between start and end times`,
+            );
+
+          const dateMatch = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+          if (!dateMatch)
+            throw new ParseError(
+              `Line ${i + 1}: invalid date format "${dateStr}" (expected YYYY-MM-DD)`,
+            );
+          const y = parseInt(dateMatch[1]),
+            mo = parseInt(dateMatch[2]),
+            dd = parseInt(dateMatch[3]);
+          const checkDate = new Date(y, mo - 1, dd);
+          if (
+            checkDate.getFullYear() !== y ||
+            checkDate.getMonth() !== mo - 1 ||
+            checkDate.getDate() !== dd
+          )
+            throw new ParseError(
+              `Line ${i + 1}: date "${dateStr}" does not exist in the calendar`,
+            );
+
+          const stMatch = startTimeStr.match(/^(\d{2}):(\d{2})$/);
+          if (!stMatch)
+            throw new ParseError(
+              `Line ${i + 1}: invalid start time "${startTimeStr}"`,
+            );
+          const sh = parseInt(stMatch[1]),
+            sm = parseInt(stMatch[2]);
+          if (sh > 23 || sm > 59)
+            throw new ParseError(
+              `Line ${i + 1}: start time out of range "${startTimeStr}"`,
+            );
+          const startMs = new Date(y, mo - 1, dd, sh, sm, 0, 0).getTime();
+
+          let endMs = null;
+          if (endTimeStr === "...") {
+            activeCount++;
+            if (activeCount > 1)
+              throw new ParseError(
+                `Line ${i + 1}: more than one active session (...)`,
+              );
+          } else {
+            if (activeCount > 0)
+              throw new ParseError(
+                `Line ${i + 1}: active session (...) must be the last entry`,
+              );
+            const etMatch = endTimeStr.match(/^(\d{2}):(\d{2})$/);
+            if (!etMatch)
+              throw new ParseError(
+                `Line ${i + 1}: invalid end time "${endTimeStr}" (expected HH:MM or ...)`,
+              );
+            const eh = parseInt(etMatch[1]),
+              em = parseInt(etMatch[2]);
+            if (eh > 23 || em > 59)
+              throw new ParseError(
+                `Line ${i + 1}: end time out of range "${endTimeStr}"`,
+              );
+            endMs = new Date(y, mo - 1, dd, eh, em, 0, 0).getTime();
+            if (endMs <= startMs)
+              throw new ParseError(
+                `Line ${i + 1}: End time must be after start time (sessions cannot span midnight or be zero-duration)`,
+              );
+          }
+
+          if (startMs <= prevStartMs)
+            throw new ParseError(
+              `Line ${i + 1}: log entries must be in strictly ascending chronological order`,
+            );
+          if (prevEndMs !== -Infinity && startMs < prevEndMs)
+            throw new ParseError(
+              `Line ${i + 1}: session overlaps with previous session`,
+            );
+
+          const proj = parsedProjects.find((p) => p.name === projName);
+          if (!proj)
+            throw new ParseError(
+              `Line ${i + 1}: unknown project "${projName}"`,
+            );
+
+          prevStartMs = startMs;
+          if (endMs !== null) prevEndMs = endMs;
+
+          if (endTimeStr === "...") {
+            parsedActive = {
+              id: uid(),
+              projectId: proj.id,
+              start: startMs,
+            };
+            parsedLogBlocks.push({ type: "active" });
+          } else {
+            const sess = {
+              id: uid(),
+              projectId: proj.id,
+              start: startMs,
+              end: endMs,
+            };
+            parsedSessions.push(sess);
+            parsedLogBlocks.push({ type: "session", id: sess.id });
+          }
+        }
+
+        return {
+          projects: parsedProjects,
+          sessions: parsedSessions,
+          active: parsedActive,
+          preProjectsComments: parsedPreProjectsComments,
+          projectBlocks: parsedProjectBlocks,
+          logBlocks: parsedLogBlocks,
+        };
+      }
+
+      function serializeFile() {
+        const maxLen = projects.reduce((m, p) => Math.max(m, p.name.length), 0);
+        const emitLines = (arr) => arr.map((l) => l + "\n").join("");
+
+        let out = HEADER1 + "\n" + HEADER2 + "\n";
+        out += preProjectsComments.length
+          ? emitLines(preProjectsComments)
+          : "\n";
+        out += "[projects]\n";
+        for (const b of projectBlocks) {
+          if (b.type === "pass") {
+            out += b.text + "\n";
+            continue;
+          }
+          const p = projects.find((p) => p.id === b.id);
+          if (p) out += p.name.padEnd(maxLen + 4) + p.color + "\n";
+        }
+        const lastPB = projectBlocks[projectBlocks.length - 1];
+        if (!lastPB || lastPB.type !== "pass" || lastPB.text.trim() !== "")
+          out += "\n";
+        out += "[log]\n";
+        for (const b of logBlocks) {
+          if (b.type === "pass") {
+            out += b.text + "\n";
+            continue;
+          }
+          if (b.type === "session") {
+            const s = sessions.find((s) => s.id === b.id);
+            const p = s && projects.find((p) => p.id === s.projectId);
+            if (s && p)
+              out += `${formatDT(roundMinute(s.start))} - ${formatTimeOnly(roundMinute(s.end))}  ${p.name}\n`;
+          } else if (b.type === "active" && active) {
+            const p = projects.find((p) => p.id === active.projectId);
+            if (p)
+              out += `${formatDT(roundMinute(active.start))} - ...  ${p.name}\n`;
+          }
+        }
+        return out;
+      }
+
+      async function saveFile() {
+        if (!fileHandle) return;
+        const content = serializeFile();
+        lastWrittenContent = content;
+        const writable = await fileHandle.createWritable();
+        await writable.write(content);
+        await writable.close();
+      }
+
+      async function openFile() {
+        if (!window.showOpenFilePicker) {
+          await showWidgetAlert(
+            "File system access is not available.\n\nThis widget must be opened as a file:// URL or via https://.",
+          );
+          return;
+        }
+        try {
+          [fileHandle] = await window.showOpenFilePicker({
+            types: [
+              {
+                description: "Time tracker file",
+                accept: { "text/plain": [".txt"] },
+              },
+            ],
+            multiple: false,
+          });
+          await idb.set("file", fileHandle);
+          await enterFileMode(fileHandle);
+        } catch (e) {
+          if (e.name !== "AbortError") console.error("openFile:", e);
+        }
+      }
+
+      async function enterFileMode(handle) {
+        fileHandle = handle;
+        const file = await handle.getFile();
+        const text = await file.text();
+
+        if (file.size === 0 || !text.trim()) {
+          projects = [];
+          sessions = [];
+          active = null;
+          projectBlocks = [];
+          logBlocks = [];
+          preProjectsComments = [];
+          await saveFile();
+        } else {
+          try {
+            const parsed = parseFile(text);
+            projects = parsed.projects;
+            sessions = parsed.sessions;
+            active = parsed.active;
+            projectBlocks = parsed.projectBlocks;
+            logBlocks = parsed.logBlocks;
+            preProjectsComments = parsed.preProjectsComments;
+            lastWrittenContent = text;
+          } catch (e) {
+            if (e instanceof ParseError) {
+              await showWidgetAlert(e.message);
+              fileHandle = null;
+              await idb.del("file");
+              render();
+              return;
+            }
+            throw e;
+          }
+        }
+
+        fileObserver = await observeFile(handle, handleFileChange);
+
+        if (active) showStaleModal();
+        else render();
+      }
+
+      async function disconnect() {
+        if (fileObserver) {
+          fileObserver.disconnect();
+          fileObserver = null;
+        }
+        active = null;
+        projects = [];
+        sessions = [];
+        projectBlocks = [];
+        logBlocks = [];
+        preProjectsComments = [];
+        fileHandle = null;
+        lastWrittenContent = "";
+        clearTimeout(midnightTimer);
+        stopTick();
+        await idb.del("file");
+        render();
+      }
+
+      function scheduleMidnightSplit() {
+        clearTimeout(midnightTimer);
+        if (!active) return;
+        const now = new Date();
+        const endOfToday = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          23,
+          59,
+          0,
+          0,
+        );
+        const startOfTomorrow = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate() + 1,
+          0,
+          0,
+          0,
+          0,
+        );
+        midnightTimer = setTimeout(async () => {
+          if (!active) return;
+          const projectId = active.projectId;
+          stopTimer(endOfToday.getTime());
+          startTimer(projectId, startOfTomorrow.getTime());
+          saveFile().catch((e) => console.error("saveFile:", e));
+          render();
+          scheduleMidnightSplit();
+        }, startOfTomorrow - now);
+      }
+
+      function splitActiveBeforeDay(targetDayKey) {
+        let cursor = active.start;
+        const newSessions = [];
+        while (dateKey(cursor) !== targetDayKey) {
+          const d = new Date(cursor);
+          const endOfDay = new Date(
+            d.getFullYear(),
+            d.getMonth(),
+            d.getDate(),
+            23,
+            59,
+            0,
+            0,
+          ).getTime();
+          const startOfNextDay = new Date(
+            d.getFullYear(),
+            d.getMonth(),
+            d.getDate() + 1,
+            0,
+            0,
+            0,
+            0,
+          ).getTime();
+          newSessions.push({
+            id: uid(),
+            projectId: active.projectId,
+            start: cursor,
+            end: endOfDay,
+          });
+          cursor = startOfNextDay;
+        }
+        sessions.push(...newSessions);
+        const ai = logBlocks.findIndex((b) => b.type === "active");
+        const newSessionBlocks = newSessions.map((s) => ({
+          type: "session",
+          id: s.id,
+        }));
+        if (ai !== -1) logBlocks.splice(ai, 1, ...newSessionBlocks);
+        else logBlocks.push(...newSessionBlocks);
+        return cursor;
+      }
+
+      function startTimer(projectId, startMs) {
+        const ms = startMs !== undefined ? startMs : Date.now();
+        active = { id: uid(), projectId, start: ms };
+        logBlocks.push({ type: "active" });
+        scheduleMidnightSplit();
+        startTick();
+      }
+
+      function stopTimer(endMs) {
+        if (!active) return;
+        const ms = endMs !== undefined ? endMs : Date.now();
+        const endDayKey = dateKey(ms);
+
+        if (dateKey(active.start) !== endDayKey) {
+          const projectId = active.projectId;
+          const cursor = splitActiveBeforeDay(endDayKey);
+          if (roundMinute(ms) > roundMinute(cursor)) {
+            const sess = { id: uid(), projectId, start: cursor, end: ms };
+            sessions.push(sess);
+            logBlocks.push({ type: "session", id: sess.id });
+          }
+        } else {
+          const ai = logBlocks.findIndex((b) => b.type === "active");
+          if (roundMinute(ms) > roundMinute(active.start)) {
+            const sess = {
+              id: uid(),
+              projectId: active.projectId,
+              start: active.start,
+              end: ms,
+            };
+            sessions.push(sess);
+            if (ai !== -1) logBlocks[ai] = { type: "session", id: sess.id };
+            else logBlocks.push({ type: "session", id: sess.id });
+          } else {
+            if (ai !== -1) logBlocks.splice(ai, 1);
+          }
+        }
+
+        active = null;
+        clearTimeout(midnightTimer);
+        stopTick();
+      }
+
+      function startTick() {
+        if (tickHandle) return;
+        const delay = 1000 - (Date.now() % 1000);
+        tickHandle = setTimeout(() => {
+          tick();
+          tickHandle = setInterval(tick, 1000);
+        }, delay);
+      }
+
+      function stopTick() {
+        clearTimeout(tickHandle);
+        clearInterval(tickHandle);
+        tickHandle = null;
+      }
+
+      function tick() {
+        if (!active) return;
+        const dur = Date.now() - active.start;
+        const disp = document.getElementById("timer-display");
+        if (disp) disp.textContent = fmtHms(dur);
+        const liveDur = document.getElementById("live-dur");
+        if (liveDur) liveDur.textContent = fmtShort(dur);
+        const todayTotalEl = document.getElementById("today-total-dur");
+        if (todayTotalEl) {
+          const key = dateKey(Date.now());
+          const todaySess = sessions.filter((s) => dateKey(s.start) === key);
+          const base = todaySess.reduce((sum, s) => sum + (s.end - s.start), 0);
+          todayTotalEl.textContent = fmtShort(base + dur);
+        }
+        updateStatusbar();
+      }
+
+      function render() {
+        const hasFile = !!fileHandle;
+        const hasProjects = projects.length > 0;
+        document.getElementById("no-file-state").style.display = !hasFile
+          ? "flex"
+          : "none";
+        document.getElementById("no-projects").style.display =
+          hasFile && !hasProjects ? "flex" : "none";
+        document.getElementById("timer-area").style.display =
+          hasFile && hasProjects ? "flex" : "none";
+        document.getElementById("log-section").style.display =
+          hasFile && hasProjects ? "flex" : "none";
+        document.getElementById("project-select").disabled =
+          !hasFile || !hasProjects;
+        document.getElementById("btn-new").disabled = !hasFile;
+        document.getElementById("btn-delete").disabled =
+          !hasFile || !hasProjects;
+        const fileBtn = document.getElementById("btn-file");
+        fileBtn.textContent = hasFile ? "⏏" : "📄";
+        fileBtn.title = hasFile ? "Disconnect file" : "Open file";
+        fileBtn.classList.toggle("file-active", hasFile);
+        if (hasFile && hasProjects) {
+          rebuildSelect();
+          renderTimerArea();
+          renderLog();
+        }
+        updateStatusbar();
+      }
+
+      function rebuildSelect() {
+        const sel = document.getElementById("project-select");
+        sel.innerHTML = "";
+        for (const p of projects) {
+          const opt = document.createElement("option");
+          opt.value = p.id;
+          opt.textContent = p.name;
+          sel.appendChild(opt);
+        }
+        let target = selectedProjectName
+          ? projects.find((p) => p.name === selectedProjectName)
+          : null;
+        if (!target && active)
+          target = projects.find((p) => p.id === active.projectId);
+        sel.value = target ? target.id : (projects[0]?.id ?? "");
+        selectedProjectName =
+          projects.find((p) => p.id === sel.value)?.name ?? null;
+      }
+
+      function renderTimerArea() {
+        const pid = selectedId();
+        const proj = projects.find((p) => p.id === pid);
+        if (!proj) return;
+
+        document.getElementById("project-dot").style.background = proj.color;
+        document.getElementById("project-name-label").textContent = proj.name;
+
+        const isRunning = !!(active && active.projectId === pid);
+        const otherActive = !!(active && active.projectId !== pid);
+
+        const timerDisplay = document.getElementById("timer-display");
+        if (isRunning) {
+          timerDisplay.textContent = fmtHms(Date.now() - active.start);
+          timerDisplay.classList.add("running");
+        } else {
+          timerDisplay.textContent = "00:00:00";
+          timerDisplay.classList.remove("running");
+        }
+
+        const toggleBtn = document.getElementById("toggle-btn");
+        if (isRunning) {
+          toggleBtn.textContent = "■ Stop";
+          toggleBtn.className = "running";
+        } else {
+          toggleBtn.textContent = "▶ Start";
+          toggleBtn.className = "idle";
+        }
+
+        const otherNotice = document.getElementById("other-running-notice");
+        if (otherActive) {
+          const other = projects.find((p) => p.id === active.projectId);
+          otherNotice.textContent = other
+            ? `● ${other.name} is currently running`
+            : "";
+        } else {
+          otherNotice.textContent = "";
+        }
+      }
+
+      function renderLog() {
+        const logWrap = document.getElementById("log-wrap");
+        const btnOlder = document.getElementById("btn-show-older");
+        const todayK = dateKey(Date.now());
+
+        const dayMap = new Map();
+
+        for (const s of sessions) {
+          const key = dateKey(s.start);
+          if (!dayMap.has(key)) dayMap.set(key, []);
+          dayMap.get(key).push({ ...s, isActive: false });
+        }
+
+        if (active) {
+          const key = dateKey(active.start);
+          if (!dayMap.has(key)) dayMap.set(key, []);
+          dayMap.get(key).push({
+            id: active.id,
+            projectId: active.projectId,
+            start: active.start,
+            end: null,
+            isActive: true,
+          });
+        }
+
+        const allDays = [...dayMap.keys()].sort((a, b) => b.localeCompare(a));
+        const shown = allDays.slice(0, visibleDays);
+        const remaining = allDays.length - shown.length;
+
+        logWrap.innerHTML = "";
+
+        const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const MONTH_NAMES = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+
+        for (const key of shown) {
+          const daySessions = (dayMap.get(key) || []).sort(
+            (a, b) => a.start - b.start,
+          );
+          const isToday = key === todayK;
+          const isExpanded = isToday || expandedDays.has(key);
+
+          const [ky, km, kd] = key.split("-").map(Number);
+          const dt = new Date(ky, km - 1, kd);
+          const curYear = new Date().getFullYear();
+
+          let dayLabel;
+          if (isToday) {
+            dayLabel = `Today — ${DAY_NAMES[dt.getDay()]} ${kd} ${MONTH_NAMES[km - 1]}`;
+          } else if (ky === curYear) {
+            dayLabel = `${DAY_NAMES[dt.getDay()]} ${kd} ${MONTH_NAMES[km - 1]}`;
+          } else {
+            dayLabel = `${DAY_NAMES[dt.getDay()]} ${kd} ${MONTH_NAMES[km - 1]} ${ky}`;
+          }
+
+          const completedSess = daySessions.filter((s) => !s.isActive);
+          const base = completedSess.reduce(
+            (sum, s) => sum + (s.end - s.start),
+            0,
+          );
+          const hasLive = daySessions.some((s) => s.isActive);
+          const liveDur = hasLive && active ? Date.now() - active.start : 0;
+          const totalDur = base + liveDur;
+
+          const block = document.createElement("div");
+          block.className = "day-block";
+          block.dataset.key = key;
+
+          const header = document.createElement("div");
+          header.className = "day-header";
+
+          const labelSpan = document.createElement("span");
+          labelSpan.className = "day-label";
+          labelSpan.textContent = dayLabel;
+
+          const totalSpan = document.createElement("span");
+          totalSpan.className = "day-total" + (hasLive ? " live" : "");
+          totalSpan.textContent = fmtShort(totalDur);
+          if (isToday) totalSpan.id = "today-total-dur";
+
+          const chevron = document.createElement("span");
+          chevron.className = "day-chevron";
+          chevron.textContent = isExpanded ? "▾" : "▸";
+
+          header.appendChild(labelSpan);
+          header.appendChild(totalSpan);
+          header.appendChild(chevron);
+
+          if (!isToday) {
+            header.addEventListener("click", () => {
+              if (expandedDays.has(key)) {
+                expandedDays.delete(key);
+              } else {
+                expandedDays.add(key);
+              }
+              renderLog();
+            });
+          }
+
+          block.appendChild(header);
+
+          if (isExpanded) {
+            const sessDiv = document.createElement("div");
+            sessDiv.className = "day-sessions";
+
+            for (const s of daySessions) {
+              const proj = projects.find((p) => p.id === s.projectId);
+              const startStr = formatTimeOnly(s.start);
+              const endStr = s.isActive ? "now" : formatTimeOnly(s.end);
+              const dur = s.isActive ? Date.now() - s.start : s.end - s.start;
+
+              const row = document.createElement("div");
+              row.className = "session-row";
+
+              const rangeSpan = document.createElement("span");
+              rangeSpan.className = "session-range";
+              rangeSpan.textContent = `${startStr} – ${endStr}`;
+
+              const dot = document.createElement("span");
+              dot.className = "session-dot";
+              dot.style.background = proj ? proj.color : "var(--muted)";
+
+              const nameSpan = document.createElement("span");
+              nameSpan.className = "session-name";
+              nameSpan.textContent = proj ? proj.name : "Unknown";
+
+              const durSpan = document.createElement("span");
+              durSpan.className = "session-dur" + (s.isActive ? " live" : "");
+              durSpan.textContent = fmtShort(dur);
+              if (s.isActive) durSpan.id = "live-dur";
+
+              row.appendChild(rangeSpan);
+              row.appendChild(dot);
+              row.appendChild(nameSpan);
+              row.appendChild(durSpan);
+              sessDiv.appendChild(row);
+            }
+
+            block.appendChild(sessDiv);
+          }
+
+          logWrap.appendChild(block);
+        }
+
+        if (remaining > 0) {
+          btnOlder.style.display = "block";
+          btnOlder.textContent = `Show ${remaining} older day${remaining !== 1 ? "s" : ""}`;
+        } else {
+          btnOlder.style.display = "none";
+        }
+      }
+
+      let noticeTimer = null;
+      function showNotice(msg, isError) {
+        const el = document.getElementById("statusbar-right");
+        el.textContent = msg;
+        el.style.color = isError ? "var(--danger)" : "var(--accent)";
+        clearTimeout(noticeTimer);
+        noticeTimer = setTimeout(() => {
+          el.textContent = "";
+          el.style.color = "";
+        }, 5000);
+      }
+
+      function updateStatusbar() {
+        const fileEl = document.getElementById("statusbar-file");
+        const leftEl = document.getElementById("statusbar-left");
+        if (fileHandle) {
+          fileEl.style.display = "block";
+          fileEl.textContent = fileHandle.name;
+          const key = dateKey(Date.now());
+          const todaySess = sessions.filter((s) => dateKey(s.start) === key);
+          const base = todaySess.reduce((sum, s) => sum + (s.end - s.start), 0);
+          const liveDur = active ? Date.now() - active.start : 0;
+          leftEl.textContent = "Total today: " + fmtShort(base + liveDur);
+        } else {
+          fileEl.style.display = "";
+          fileEl.textContent = "";
+          leftEl.textContent = "No file open";
+        }
+      }
+
+      function buildColorPicker() {
+        const picker = document.getElementById("color-picker");
+        picker.innerHTML = "";
+        COLORS.forEach((color, idx) => {
+          const sw = document.createElement("div");
+          sw.className =
+            "color-swatch" + (idx === selectedColorIdx ? " selected" : "");
+          sw.style.background = color;
+          sw.addEventListener("click", () => {
+            selectedColorIdx = idx;
+            picker
+              .querySelectorAll(".color-swatch")
+              .forEach((s, i) => s.classList.toggle("selected", i === idx));
+          });
+          picker.appendChild(sw);
+        });
+      }
+
+      function openModal() {
+        selectedColorIdx = projects.length % COLORS.length;
+        document.getElementById("modal-name").value = "";
+        setModalError("");
+        buildColorPicker();
+        document.getElementById("modal-overlay").classList.add("visible");
+        setTimeout(() => document.getElementById("modal-name").focus(), 40);
+      }
+
+      function setModalError(msg) {
+        const el = document.getElementById("modal-error");
+        el.textContent = msg;
+        el.classList.toggle("visible", !!msg);
+      }
+
+      function closeModal() {
+        document.getElementById("modal-overlay").classList.remove("visible");
+      }
+
+      async function createProject() {
+        const name = document.getElementById("modal-name").value.trim();
+        if (!name) {
+          setModalError("Project name cannot be empty.");
+          document.getElementById("modal-name").focus();
+          return;
+        }
+        if (name.startsWith("//")) {
+          setModalError("Project name cannot start with //.");
+          document.getElementById("modal-name").select();
+          return;
+        }
+        if (projects.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
+          setModalError("A project with that name already exists.");
+          document.getElementById("modal-name").select();
+          return;
+        }
+        setModalError("");
+        const project = {
+          id: uid(),
+          name,
+          color: COLORS[selectedColorIdx],
+        };
+        projects.push(project);
+        projectBlocks.push({ type: "project", id: project.id });
+        closeModal();
+        saveFile().catch((e) => console.error("saveFile:", e));
+        selectedProjectName = project.name;
+        render();
+        document.getElementById("project-select").value = project.id;
+        renderTimerArea();
+      }
+
+      function staleDesc() {
+        const proj = projects.find((p) => p.id === active.projectId);
+        const projName = proj ? proj.name : "Unknown";
+        const d = new Date(active.start);
+        const DAY_NAMES = [
+          "Sunday",
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday",
+          "Saturday",
+        ];
+        const MONTH_NAMES = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+        const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        const agoStr = fmtRelative(active.start, { days: true });
+        return `"${projName}" · started ${DAY_NAMES[d.getDay()]}, ${MONTH_NAMES[d.getMonth()]} ${d.getDate()} at ${timeStr} (${agoStr})`;
+      }
+
+      function applyRetroactiveSplits() {
+        if (!active) return;
+        const todayKey = dateKey(Date.now());
+        if (dateKey(active.start) === todayKey) return;
+        const origProjectId = active.projectId;
+        const cursor = splitActiveBeforeDay(todayKey);
+        sessions.sort((a, b) => a.start - b.start);
+        logBlocks.push({ type: "active" });
+        active = { id: uid(), projectId: origProjectId, start: cursor };
+      }
+
+      const handleFileChange = makeFileChangeHandler({
+        onModified: reloadFromExternalEdit,
+        onReconnect: async () => {
+          if (!fileHandle) throw new Error();
+          await fileHandle.getFile();
+          if (fileObserver) {
+            fileObserver.disconnect();
+            fileObserver = null;
+          }
+          fileObserver = await observeFile(fileHandle, handleFileChange);
+        },
+        onDisconnect: disconnect,
+      });
+
+      async function reloadFromExternalEdit() {
+        if (!fileHandle) return;
+        try {
+          const file = await fileHandle.getFile();
+          const text = await file.text();
+          if (text === lastWrittenContent) return;
+          let parsed;
+          try {
+            parsed = parseFile(text);
+          } catch (e) {
+            if (e instanceof ParseError) {
+              showNotice("External edit rejected: " + e.message, true);
+              return;
+            }
+            throw e;
+          }
+          reconcileExternalChange(parsed, text);
+        } catch (_) {}
+      }
+
+      function reconcileExternalChange(parsed, rawText) {
+        if (active) {
+          const savedProjectName = projects.find(
+            (p) => p.id === active.projectId,
+          )?.name;
+          const savedStart = active.start;
+          projects = parsed.projects;
+          sessions = parsed.sessions;
+          projectBlocks = parsed.projectBlocks;
+          logBlocks = parsed.logBlocks;
+          preProjectsComments = parsed.preProjectsComments;
+          lastWrittenContent = rawText;
+          const newProj =
+            savedProjectName &&
+            projects.find((p) => p.name === savedProjectName);
+          if (newProj) {
+            active = {
+              id: uid(),
+              projectId: newProj.id,
+              start: savedStart,
+            };
+            logBlocks = logBlocks.filter((b) => b.type !== "active");
+            logBlocks.push({ type: "active" });
+          } else {
+            active = null;
+            clearTimeout(midnightTimer);
+            stopTick();
+          }
+        } else {
+          projects = parsed.projects;
+          sessions = parsed.sessions;
+          active = parsed.active;
+          projectBlocks = parsed.projectBlocks;
+          logBlocks = parsed.logBlocks;
+          preProjectsComments = parsed.preProjectsComments;
+          lastWrittenContent = rawText;
+          if (active) {
+            startTick();
+            scheduleMidnightSplit();
+          }
+        }
+        render();
+      }
+
+      function showStaleModal() {
+        document.getElementById("stale-desc").textContent = staleDesc();
+        document.getElementById("btn-stale-resume").style.display = "";
+        staleStopAtMode = false;
+        document.getElementById("btn-stale-stop-at").textContent =
+          "Stop at\u2026";
+        document.getElementById("stale-stop-at-wrap").style.display = "none";
+        document.getElementById("stale-stop-at-input").value = toDatetimeLocal(
+          roundMinute(Date.now()),
+        );
+        document.getElementById("stale-error").classList.remove("visible");
+        document.getElementById("stale-overlay").classList.add("visible");
+      }
+
+      function hideStaleModal() {
+        document.getElementById("stale-overlay").classList.remove("visible");
+      }
+
+      document.getElementById("btn-file").addEventListener("click", () => {
+        if (fileHandle) disconnect();
+        else openFile();
+      });
+
+      document.getElementById("btn-new").addEventListener("click", () => {
+        if (!fileHandle) return;
+        openModal();
+      });
+
+      document
+        .getElementById("btn-delete")
+        .addEventListener("click", async () => {
+          const pid = selectedId();
+          const proj = projects.find((p) => p.id === pid);
+          if (!proj) return;
+          if (
+            !(await showWidgetConfirm(
+              `Delete "${proj.name}"?\n\nAll tracked time for this project will be permanently removed.`,
+            ))
+          )
+            return;
+          if (active && active.projectId === pid) {
+            const ai = logBlocks.findIndex((b) => b.type === "active");
+            if (ai !== -1) logBlocks.splice(ai, 1);
+            active = null;
+            clearTimeout(midnightTimer);
+            stopTick();
+          }
+          const deletedSessIds = new Set(
+            sessions.filter((s) => s.projectId === pid).map((s) => s.id),
+          );
+          sessions = sessions.filter((s) => s.projectId !== pid);
+          projects = projects.filter((p) => p.id !== pid);
+          projectBlocks = projectBlocks.filter(
+            (b) => b.type === "pass" || b.id !== pid,
+          );
+          logBlocks = logBlocks.filter(
+            (b) =>
+              b.type === "pass" ||
+              (b.type === "session" && !deletedSessIds.has(b.id)) ||
+              b.type === "active",
+          );
+          saveFile().catch((e) => console.error("saveFile:", e));
+          render();
+        });
+
+      document
+        .getElementById("toggle-btn")
+        .addEventListener("click", async () => {
+          const pid = selectedId();
+          if (!pid) return;
+          if (active && active.projectId === pid) {
+            stopTimer();
+          } else {
+            startTimer(pid);
+          }
+          saveFile().catch((e) => console.error("saveFile:", e));
+          render();
+        });
+
+      document
+        .getElementById("project-select")
+        .addEventListener("change", () => {
+          const p = projects.find((p) => p.id === selectedId());
+          if (p) selectedProjectName = p.name;
+          renderTimerArea();
+        });
+
+      document
+        .getElementById("modal-cancel")
+        .addEventListener("click", closeModal);
+      document
+        .getElementById("modal-confirm")
+        .addEventListener("click", createProject);
+
+      document.getElementById("modal-name").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") createProject();
+        if (e.key === "Escape") closeModal();
+      });
+
+      attachModalHandlers(document.getElementById("modal-overlay"), closeModal);
+
+      document
+        .getElementById("btn-show-older")
+        .addEventListener("click", () => {
+          visibleDays += 30;
+          renderLog();
+        });
+
+      document
+        .getElementById("btn-stale-resume")
+        .addEventListener("click", async () => {
+          applyRetroactiveSplits();
+          saveFile().catch((e) => console.error("saveFile:", e));
+          startTick();
+          scheduleMidnightSplit();
+          hideStaleModal();
+          render();
+        });
+
+      document
+        .getElementById("btn-stale-stop-now")
+        .addEventListener("click", async () => {
+          stopTimer(roundMinute(Date.now()));
+          saveFile().catch((e) => console.error("saveFile:", e));
+          hideStaleModal();
+          render();
+        });
+
+      document
+        .getElementById("btn-stale-stop-at")
+        .addEventListener("click", async () => {
+          if (!staleStopAtMode) {
+            staleStopAtMode = true;
+            document.getElementById("btn-stale-stop-at").textContent =
+              "Confirm";
+            document.getElementById("stale-stop-at-wrap").style.display =
+              "flex";
+            document.getElementById("stale-stop-at-input").focus();
+          } else {
+            const val = document.getElementById("stale-stop-at-input").value;
+            const errEl = document.getElementById("stale-error");
+            const parsedMs = parseDatetimeLocal(val);
+            if (isNaN(parsedMs)) {
+              errEl.textContent = "Please enter a valid date and time.";
+              errEl.classList.add("visible");
+              return;
+            }
+            if (parsedMs <= active.start) {
+              errEl.textContent =
+                "Stop time must be after the session start time.";
+              errEl.classList.add("visible");
+              return;
+            }
+            stopTimer(roundMinute(parsedMs));
+            saveFile().catch((e) => console.error("saveFile:", e));
+            hideStaleModal();
+            render();
+          }
+        });
+
+      document
+        .getElementById("btn-stale-discard")
+        .addEventListener("click", async () => {
+          active = null;
+          clearTimeout(midnightTimer);
+          stopTick();
+          saveFile().catch((e) => console.error("saveFile:", e));
+          hideStaleModal();
+          render();
+        });
+
+      async function init() {
+        buildColorPicker();
+        let handled = false;
+        await restoreHandle(
+          idb,
+          "file",
+          async (h) => {
+            handled = true;
+            fileHandle = h;
+            await enterFileMode(h);
+          },
+          async () => {
+            handled = true;
+            fileHandle = null;
+            render();
+          },
+        );
+        if (!handled) render();
+      }
+
+      init();
+    </script>
+  </body>
+</html>

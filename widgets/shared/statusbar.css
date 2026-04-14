@@ -1,0 +1,28 @@
+#statusbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  font-size: 10px;
+  color: var(--muted);
+  flex-shrink: 0;
+  gap: 8px;
+}
+#statusbar-left {
+  flex-shrink: 0;
+}
+#statusbar-file {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--green);
+  display: none;
+}
+#statusbar-right {
+  color: var(--accent);
+  font-weight: 500;
+  flex-shrink: 0;
+}

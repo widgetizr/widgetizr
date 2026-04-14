@@ -1,0 +1,943 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Server Monitor</title>
+    <link rel="stylesheet" href="../shared/theme.css" />
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="../shared/toolbar.css" />
+    <link rel="stylesheet" href="../shared/statusbar.css" />
+    <link rel="stylesheet" href="../shared/modal.css" />
+    <link rel="stylesheet" href="../shared/buttons.css" />
+    <link rel="stylesheet" href="../shared/empty-state.css" />
+    <style>
+      /* ── Main scrollable area ─────────────────────────────────────────── */
+      #main {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 10px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      /* ── Server cards (compact all-view) ──────────────────────────────── */
+      #cards {
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+      }
+      #cards.visible {
+        display: flex;
+      }
+
+      .server-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        cursor: pointer;
+        transition: border-color 0.15s;
+      }
+      .server-card:hover {
+        border-color: var(--border-hi);
+      }
+
+      .card-header {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        background: var(--muted);
+        transition: background 0.3s;
+      }
+      .status-dot.online {
+        background: var(--green);
+      }
+      .status-dot.offline {
+        background: var(--danger);
+      }
+      .status-dot.warn {
+        background: var(--warn);
+      }
+
+      .card-name {
+        flex: 1;
+        font-size: 12px;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .card-uptime {
+        font-size: 10px;
+        color: var(--muted);
+        flex-shrink: 0;
+      }
+      .card-error {
+        font-size: 10px;
+        color: var(--danger);
+      }
+
+      /* ── Metric bar rows ──────────────────────────────────────────────── */
+      .bar-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .bar-label {
+        font-size: 10px;
+        color: var(--muted);
+        width: 32px;
+        flex-shrink: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .bar-track {
+        flex: 1;
+        height: 5px;
+        background: var(--border);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition:
+          width 0.4s ease,
+          background 0.4s;
+      }
+      .bar-value {
+        font-size: 10px;
+        color: var(--muted);
+        width: 32px;
+        text-align: right;
+        flex-shrink: 0;
+        font-variant-numeric: tabular-nums;
+      }
+      .card-footer {
+        font-size: 9px;
+        color: var(--muted);
+        text-align: right;
+      }
+
+      /* ── Detail view ──────────────────────────────────────────────────── */
+      #detail {
+        display: none;
+        flex-direction: column;
+        gap: 12px;
+      }
+      #detail.visible {
+        display: flex;
+      }
+
+      .detail-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .detail-status-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        background: var(--muted);
+        transition: background 0.3s;
+      }
+      .detail-status-dot.online {
+        background: var(--green);
+      }
+      .detail-status-dot.offline {
+        background: var(--danger);
+      }
+      .detail-status-dot.warn {
+        background: var(--warn);
+      }
+
+      .detail-hostname {
+        font-size: 16px;
+        font-weight: 600;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .detail-server-name {
+        font-size: 10px;
+        color: var(--muted);
+        flex-shrink: 0;
+      }
+
+      .detail-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .detail-meta strong {
+        color: var(--text);
+        font-weight: 500;
+      }
+
+      .detail-section {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .detail-section-label {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--muted);
+        border-bottom: 1px solid var(--border);
+        padding-bottom: 4px;
+      }
+
+      .detail-bar-row {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .detail-bar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        gap: 8px;
+      }
+      .detail-bar-name {
+        font-size: 11px;
+        color: var(--text);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .detail-bar-value {
+        font-size: 10px;
+        color: var(--muted);
+        flex-shrink: 0;
+        font-variant-numeric: tabular-nums;
+      }
+      .detail-bar-track {
+        height: 6px;
+        background: var(--border);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .detail-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        transition:
+          width 0.4s ease,
+          background 0.4s;
+      }
+
+      .net-table {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .net-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+      }
+      .net-iface {
+        width: 90px;
+        color: var(--text);
+        font-weight: 500;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        flex-shrink: 0;
+      }
+      .net-dir {
+        flex: 1;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
+      .net-dir span {
+        color: var(--text);
+      }
+
+      .detail-notice {
+        font-size: 12px;
+        color: var(--muted);
+        text-align: center;
+        padding: 24px 16px;
+        line-height: 1.6;
+      }
+      .detail-notice.error {
+        color: var(--danger);
+      }
+      .detail-notice small {
+        display: block;
+        font-size: 10px;
+        color: var(--muted);
+        margin-top: 4px;
+      }
+
+      .detail-updated {
+        font-size: 9px;
+        color: var(--muted);
+        text-align: right;
+      }
+
+      .modal-help {
+        font-size: 11px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="toolbar">
+      <select
+        id="server-select"
+        class="toolbar-select"
+        title="Select server"
+      ></select>
+      <button class="icon-btn" id="btn-new" title="Add server">＋</button>
+      <button
+        class="icon-btn danger"
+        id="btn-remove"
+        title="Remove server"
+        disabled
+      >
+        🗑
+      </button>
+      <button class="icon-btn" id="btn-refresh" title="Refresh now">↺</button>
+    </div>
+
+    <div id="main">
+      <div id="empty-state" class="empty-state">
+        <div class="icon">🖥</div>
+        <p>No servers yet.<br />Click ＋ to add your first server.</p>
+      </div>
+      <div id="cards"></div>
+      <div id="detail"></div>
+    </div>
+
+    <div id="statusbar">
+      <span id="statusbar-left">No servers</span>
+      <span id="statusbar-right"></span>
+    </div>
+
+    <div id="modal-overlay">
+      <div id="modal">
+        <h3>Add Server</h3>
+        <div class="modal-field">
+          <label>Name</label>
+          <input
+            class="modal-input"
+            id="modal-name"
+            type="text"
+            placeholder="My VPS"
+            maxlength="40"
+            autocomplete="off"
+          />
+        </div>
+        <div class="modal-field">
+          <label>URL</label>
+          <input
+            class="modal-input"
+            id="modal-url"
+            type="text"
+            placeholder="https://my-server.com:3737"
+            maxlength="200"
+            autocomplete="off"
+          />
+        </div>
+        <div class="modal-field">
+          <label>Token</label>
+          <input
+            id="modal-token"
+            class="modal-input"
+            type="password"
+            placeholder="Paste token from get-token"
+            autocomplete="off"
+          />
+          <div class="modal-help">
+            Stored locally in this widget's browser storage on your machine.
+          </div>
+        </div>
+        <div class="modal-error"></div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+          <button class="btn btn-primary" id="modal-add">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../shared/shared.js"></script>
+    <script>
+      "use strict";
+
+      const STORAGE_KEY = "widgetizr-server-monitor-v1";
+      const REFRESH_MS = 30_000;
+
+      let servers = [];
+      let state = {};
+      let pollHandle = null;
+      let nextPollAt = 0;
+
+      function fmtMem(mb) {
+        if (mb >= 1024) return (mb / 1024).toFixed(1) + " GB";
+        return mb + " MB";
+      }
+
+      function barColor(pct) {
+        if (pct >= 90) return "var(--danger)";
+        if (pct >= 70) return "var(--warn)";
+        return "var(--green)";
+      }
+
+      function mkBar(pct, tall) {
+        const cls = tall ? "detail-bar-fill" : "bar-fill";
+        const safe = Math.min(Math.max(pct, 0), 100);
+        return `<div class="${cls}" style="width:${safe}%;background:${barColor(pct)}"></div>`;
+      }
+
+      function isPhysical(iface) {
+        return (
+          !iface.startsWith("veth") &&
+          !iface.startsWith("docker") &&
+          !iface.startsWith("br-")
+        );
+      }
+
+      function loadData() {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) servers = JSON.parse(raw);
+        } catch {
+          servers = [];
+        }
+      }
+
+      function saveData() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(servers));
+      }
+
+      async function pollServer(server) {
+        const id = server.id;
+        if (!state[id]) {
+          state[id] = {
+            data: null,
+            status: "loading",
+            errorMsg: "",
+            lastFetchMs: 0,
+          };
+        }
+        try {
+          const url = server.url.replace(/\/$/, "") + "/metrics";
+          const res = await fetch(url, {
+            headers: { Authorization: "Bearer " + server.token },
+            signal: AbortSignal.timeout(8000),
+          });
+          if (res.status === 401) {
+            state[id].status = "offline";
+            state[id].errorMsg = "Invalid token";
+            return;
+          }
+          if (res.status === 503) {
+            if (state[id].data === null) {
+              state[id].status = "loading";
+              state[id].errorMsg = "Collecting initial metrics…";
+            } else {
+              state[id].status = "offline";
+              state[id].errorMsg = "Service unavailable";
+            }
+            return;
+          }
+          if (!res.ok) {
+            const body = await res.json().catch(() => ({}));
+            state[id].status = "offline";
+            state[id].errorMsg = body.error ?? `HTTP ${res.status}`;
+            return;
+          }
+          state[id].data = await res.json();
+          const d = state[id].data;
+          const highCpu = d.cpu?.percent > 85;
+          const highMem = d.memory?.percent > 90;
+          const highDisk = d.disks?.some((disk) => disk.percent > 90);
+          state[id].status = highCpu || highMem || highDisk ? "warn" : "online";
+          state[id].errorMsg = "";
+          state[id].lastFetchMs = Date.now();
+        } catch (err) {
+          state[id].status = "offline";
+          state[id].errorMsg = err instanceof Error ? err.message : String(err);
+        }
+      }
+
+      async function pollAll() {
+        if (!servers.length) return;
+        await Promise.all(servers.map(pollServer));
+        render();
+      }
+
+      function schedulePoll() {
+        clearTimeout(pollHandle);
+        nextPollAt = Date.now() + REFRESH_MS;
+        pollHandle = setTimeout(async () => {
+          await pollAll();
+          schedulePoll();
+        }, REFRESH_MS);
+      }
+
+      function selectedId() {
+        return document.getElementById("server-select").value;
+      }
+
+      function rebuildSelect() {
+        const sel = document.getElementById("server-select");
+        const prev = sel.value;
+        sel.innerHTML = "";
+
+        if (!servers.length) {
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.disabled = true;
+          opt.textContent = "No servers";
+          sel.appendChild(opt);
+          return;
+        }
+
+        const allOpt = document.createElement("option");
+        allOpt.value = "";
+        allOpt.textContent = "All servers";
+        sel.appendChild(allOpt);
+
+        for (const s of servers) {
+          const opt = document.createElement("option");
+          opt.value = s.id;
+          opt.textContent = s.name;
+          sel.appendChild(opt);
+        }
+
+        if (servers.find((s) => s.id === prev)) sel.value = prev;
+      }
+
+      function renderCards() {
+        const el = document.getElementById("cards");
+        el.innerHTML = servers
+          .map((s) => {
+            const st = state[s.id];
+            const dot = st?.status ?? "loading";
+
+            if (!st?.data) {
+              return `<div class="server-card" data-id="${esc(s.id)}">
+                            <div class="card-header">
+                                <div class="status-dot ${esc(dot)}"></div>
+                                <div class="card-name">${esc(s.name)}</div>
+                                <div class="card-uptime">${dot === "loading" ? "connecting…" : ""}</div>
+                            </div>
+                            ${st?.errorMsg ? `<div class="card-error">${esc(st.errorMsg)}</div>` : ""}
+                        </div>`;
+            }
+
+            const d = st.data;
+            const foot = st.lastFetchMs
+              ? `<div class="card-footer" data-last-fetch="${st.lastFetchMs}">updated ${fmtRelative(st.lastFetchMs, { seconds: true })}</div>`
+              : "";
+
+            const diskRows = d.disks
+              .slice(0, 2)
+              .map((disk) => {
+                const label =
+                  disk.mount.length > 5
+                    ? "…" + disk.mount.slice(-4)
+                    : disk.mount;
+                return `<div class="bar-row">
+                            <div class="bar-label" title="${esc(disk.mount)}">${esc(label)}</div>
+                            <div class="bar-track">${mkBar(disk.percent, false)}</div>
+                            <div class="bar-value">${disk.percent}%</div>
+                        </div>`;
+              })
+              .join("");
+
+            const swapRow =
+              d.memory.swapTotalMb > 0
+                ? `<div class="bar-row">
+                               <div class="bar-label">Swap</div>
+                               <div class="bar-track">${mkBar(d.memory.swapPercent, false)}</div>
+                               <div class="bar-value">${d.memory.swapPercent}%</div>
+                           </div>`
+                : "";
+
+            return `<div class="server-card" data-id="${esc(s.id)}">
+                        <div class="card-header">
+                            <div class="status-dot ${esc(dot)}"></div>
+                            <div class="card-name">${esc(s.name)}</div>
+                            <div class="card-uptime">↑ ${fmtUptime(d.uptime)}</div>
+                        </div>
+                        <div class="bar-row">
+                            <div class="bar-label">CPU</div>
+                            <div class="bar-track">${mkBar(d.cpu.percent, false)}</div>
+                            <div class="bar-value">${d.cpu.percent}%</div>
+                        </div>
+                        <div class="bar-row">
+                            <div class="bar-label">RAM</div>
+                            <div class="bar-track">${mkBar(d.memory.percent, false)}</div>
+                            <div class="bar-value">${d.memory.percent}%</div>
+                        </div>
+                        ${swapRow}
+                        ${diskRows}
+                        ${foot}
+                    </div>`;
+          })
+          .join("");
+
+        el.querySelectorAll(".server-card").forEach((card) => {
+          card.addEventListener("click", () => {
+            document.getElementById("server-select").value =
+              card.dataset.id ?? "";
+            render();
+          });
+        });
+      }
+
+      function renderDetail(sid) {
+        const el = document.getElementById("detail");
+        const server = servers.find((s) => s.id === sid);
+        if (!server) {
+          el.innerHTML = "";
+          return;
+        }
+
+        const st = state[sid];
+
+        if (!st || st.status === "loading") {
+          el.innerHTML = `<div class="detail-notice">Connecting to <strong>${esc(server.name)}</strong>…${st?.errorMsg ? `<small>${esc(st.errorMsg)}</small>` : ""}</div>`;
+          return;
+        }
+
+        if (st.status === "offline" || !st.data) {
+          el.innerHTML = `<div class="detail-notice error">
+                        <strong>${esc(server.name)}</strong> is unreachable
+                        <small>${esc(st.errorMsg)}</small>
+                    </div>`;
+          return;
+        }
+
+        const d = st.data;
+
+        const cpuSection = `
+                    <div class="detail-section">
+                        <div class="detail-section-label">CPU</div>
+                        <div class="detail-bar-row">
+                            <div class="detail-bar-header">
+                                <span class="detail-bar-name">Usage</span>
+                                <span class="detail-bar-value">${d.cpu.percent}%</span>
+                            </div>
+                            <div class="detail-bar-track">${mkBar(d.cpu.percent, true)}</div>
+                        </div>
+                    </div>`;
+
+        const swapDetailRow =
+          d.memory.swapTotalMb > 0
+            ? `<div class="detail-bar-row">
+                           <div class="detail-bar-header">
+                               <span class="detail-bar-name">Swap</span>
+                               <span class="detail-bar-value">${fmtMem(d.memory.swapUsedMb)} / ${fmtMem(d.memory.swapTotalMb)} · ${d.memory.swapPercent}%</span>
+                           </div>
+                           <div class="detail-bar-track">${mkBar(d.memory.swapPercent, true)}</div>
+                       </div>`
+            : "";
+
+        const memSection = `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Memory</div>
+                        <div class="detail-bar-row">
+                            <div class="detail-bar-header">
+                                <span class="detail-bar-name">RAM</span>
+                                <span class="detail-bar-value">${fmtMem(d.memory.usedMb)} / ${fmtMem(d.memory.totalMb)} · ${d.memory.percent}%</span>
+                            </div>
+                            <div class="detail-bar-track">${mkBar(d.memory.percent, true)}</div>
+                        </div>
+                        ${swapDetailRow}
+                    </div>`;
+
+        const diskRows = d.disks
+          .map(
+            (disk) => `
+                    <div class="detail-bar-row">
+                        <div class="detail-bar-header">
+                            <span class="detail-bar-name">${esc(disk.mount)}</span>
+                            <span class="detail-bar-value">${disk.usedGb} / ${disk.totalGb} GB · ${disk.percent}%</span>
+                        </div>
+                        <div class="detail-bar-track">${mkBar(disk.percent, true)}</div>
+                    </div>`,
+          )
+          .join("");
+
+        const diskSection = `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Disk</div>
+                        ${diskRows}
+                    </div>`;
+
+        const netIfaces = d.network
+          .filter(
+            (n) =>
+              isPhysical(n.iface) || n.rxBytesPerSec > 0 || n.txBytesPerSec > 0,
+          )
+          .slice(0, 8);
+
+        const netSection = netIfaces.length
+          ? `
+                    <div class="detail-section">
+                        <div class="detail-section-label">Network</div>
+                        <div class="net-table">
+                            ${netIfaces
+                              .map(
+                                (n) => `
+                            <div class="net-row">
+                                <div class="net-iface">${esc(n.iface)}</div>
+                                <div class="net-dir">↓ <span>${fmtBytes(n.rxBytesPerSec)}</span></div>
+                                <div class="net-dir">↑ <span>${fmtBytes(n.txBytesPerSec)}</span></div>
+                            </div>`,
+                              )
+                              .join("")}
+                        </div>
+                    </div>`
+          : "";
+
+        const updated = st.lastFetchMs
+          ? `<div class="detail-updated" data-last-fetch="${st.lastFetchMs}">Updated ${fmtRelative(st.lastFetchMs, { seconds: true })}</div>`
+          : "";
+
+        el.innerHTML = `
+                    <div class="detail-header">
+                        <div class="detail-status-dot ${esc(st.status)}"></div>
+                        <div class="detail-hostname">${esc(d.hostname)}</div>
+                        <div class="detail-server-name">${esc(server.name)}</div>
+                    </div>
+                    <div class="detail-meta">
+                        <span>Uptime&nbsp;<strong>${fmtUptime(d.uptime)}</strong></span>
+                        <span>Load&nbsp;<strong>${d.loadAvg[0].toFixed(2)} ${d.loadAvg[1].toFixed(2)} ${d.loadAvg[2].toFixed(2)}</strong></span>
+                    </div>
+                    ${cpuSection}
+                    ${memSection}
+                    ${diskSection}
+                    ${netSection}
+                    ${updated}
+                `;
+      }
+
+      function updateStatusbar() {
+        const left = document.getElementById("statusbar-left");
+        if (!servers.length) {
+          left.textContent = "No servers";
+          return;
+        }
+        const online = servers.filter(
+          (s) => state[s.id]?.status === "online",
+        ).length;
+        const total = servers.length;
+        left.textContent = `${total} server${total !== 1 ? "s" : ""} · ${online} online`;
+      }
+
+      function render() {
+        const sid = selectedId();
+        const emptyEl = document.getElementById("empty-state");
+        const cardsEl = document.getElementById("cards");
+        const detailEl = document.getElementById("detail");
+        const removeBtn = document.getElementById("btn-remove");
+
+        if (!servers.length) {
+          emptyEl.classList.add("visible");
+          cardsEl.classList.remove("visible");
+          detailEl.classList.remove("visible");
+          removeBtn.disabled = true;
+        } else if (!sid) {
+          emptyEl.classList.remove("visible");
+          cardsEl.classList.add("visible");
+          detailEl.classList.remove("visible");
+          removeBtn.disabled = true;
+          renderCards();
+        } else {
+          emptyEl.classList.remove("visible");
+          cardsEl.classList.remove("visible");
+          detailEl.classList.add("visible");
+          removeBtn.disabled = false;
+          renderDetail(sid);
+        }
+
+        updateStatusbar();
+      }
+
+      function tick() {
+        const secs = Math.max(0, Math.round((nextPollAt - Date.now()) / 1000));
+        const right = document.getElementById("statusbar-right");
+        if (right && servers.length) {
+          right.textContent = `Refresh in ${secs}s`;
+        }
+
+        document.querySelectorAll("[data-last-fetch]").forEach((el) => {
+          const ms = parseInt(el.dataset.lastFetch ?? "0");
+          if (!ms) return;
+          if (el.classList.contains("card-footer")) {
+            el.textContent = "updated " + fmtRelative(ms, { seconds: true });
+          } else {
+            el.textContent = "Updated " + fmtRelative(ms, { seconds: true });
+          }
+        });
+      }
+
+      const modalOverlay = document.getElementById("modal-overlay");
+      const modalError = document.querySelector(".modal-error");
+
+      function openModal() {
+        document.getElementById("modal-name").value = "";
+        document.getElementById("modal-url").value = "";
+        document.getElementById("modal-token").value = "";
+        modalError.textContent = "";
+        modalError.classList.remove("visible");
+        modalOverlay.classList.add("visible");
+        document.getElementById("modal-name").focus();
+      }
+
+      function closeModal() {
+        modalOverlay.classList.remove("visible");
+      }
+
+      function showModalError(msg) {
+        modalError.textContent = msg;
+        modalError.classList.add("visible");
+      }
+
+      async function addServer() {
+        const name = document.getElementById("modal-name").value.trim();
+        const url = document
+          .getElementById("modal-url")
+          .value.trim()
+          .replace(/\/$/, "");
+        const token = document.getElementById("modal-token").value.trim();
+
+        if (!name) {
+          showModalError("Name is required.");
+          return;
+        }
+        if (!url) {
+          showModalError("URL is required.");
+          return;
+        }
+        if (!token) {
+          showModalError("Token is required.");
+          return;
+        }
+        if (
+          token === "your-token-here" ||
+          token === "YOUR_TOKEN_HERE" ||
+          token === "changeme"
+        ) {
+          showModalError(
+            "Please replace the placeholder token with your real token.",
+          );
+          return;
+        }
+        try {
+          new URL(url);
+        } catch {
+          showModalError("URL is not valid.");
+          return;
+        }
+
+        const server = { id: uid(), name, url, token };
+        servers.push(server);
+        saveData();
+        state[server.id] = {
+          data: null,
+          status: "loading",
+          errorMsg: "",
+          lastFetchMs: 0,
+        };
+
+        closeModal();
+        rebuildSelect();
+        document.getElementById("server-select").value = server.id;
+        render();
+
+        await pollServer(server);
+        render();
+
+        if (Object.keys(state).length === 1) {
+          schedulePoll();
+        }
+      }
+
+      document.getElementById("btn-new").addEventListener("click", openModal);
+
+      document
+        .getElementById("btn-remove")
+        .addEventListener("click", async () => {
+          const sid = selectedId();
+          if (!sid) return;
+          const s = servers.find((s) => s.id === sid);
+          if (!s || !(await showWidgetConfirm(`Remove "${s.name}"?`))) return;
+          servers = servers.filter((s) => s.id !== sid);
+          delete state[sid];
+          saveData();
+          rebuildSelect();
+          render();
+          if (!servers.length) {
+            clearTimeout(pollHandle);
+            nextPollAt = 0;
+            document.getElementById("statusbar-right").textContent = "";
+          }
+        });
+
+      document
+        .getElementById("btn-refresh")
+        .addEventListener("click", async () => {
+          clearTimeout(pollHandle);
+          document.getElementById("statusbar-right").textContent =
+            "Refreshing…";
+          await pollAll();
+          schedulePoll();
+        });
+
+      document
+        .getElementById("server-select")
+        .addEventListener("change", render);
+
+      document
+        .getElementById("modal-cancel")
+        .addEventListener("click", closeModal);
+      document.getElementById("modal-add").addEventListener("click", addServer);
+
+      attachModalHandlers(modalOverlay, closeModal);
+
+      for (const id of ["modal-name", "modal-url", "modal-token"]) {
+        document.getElementById(id).addEventListener("keydown", (e) => {
+          if (e.key === "Enter") addServer();
+        });
+      }
+
+      setInterval(tick, 1000);
+
+      loadData();
+      rebuildSelect();
+      render();
+      if (servers.length) {
+        pollAll();
+        schedulePoll();
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,5 @@
+node_modules/
+dist/
+widget.js
+docker-compose.override.yml
+.env

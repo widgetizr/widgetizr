@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Todo</title>
+    <link rel="stylesheet" href="../shared/theme.css" />
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="../shared/toolbar.css" />
+    <link rel="stylesheet" href="../shared/statusbar.css" />
+    <link rel="stylesheet" href="../shared/modal.css" />
+    <link rel="stylesheet" href="../shared/buttons.css" />
+    <link rel="stylesheet" href="../shared/empty-state.css" />
+    <style>
+      .app {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+      }
+
+      /* ── Top chrome ─────────────────────────────────────────────────────────── */
+      #toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 7px;
+        padding: 8px 10px;
+      }
+
+      .input-row {
+        display: flex;
+        gap: 6px;
+      }
+
+      .input-row input {
+        flex: 1;
+        padding: 6px 10px;
+        background: var(--border);
+        border: 1px solid var(--border-hi);
+        border-radius: 6px;
+        color: var(--text);
+        font-size: 13px;
+        font-family: inherit;
+        outline: none;
+        transition: border-color 0.15s;
+      }
+      .input-row input::placeholder {
+        color: var(--muted);
+      }
+      .input-row input:focus {
+        border-color: var(--accent);
+      }
+
+      #addBtn {
+        padding: 6px 13px;
+        background: var(--accent);
+        border: none;
+        border-radius: 6px;
+        color: var(--on-accent);
+        font-size: 18px;
+        line-height: 1;
+        cursor: pointer;
+        transition: background 0.15s;
+        flex-shrink: 0;
+      }
+      #addBtn:hover {
+        background: var(--accent-h);
+      }
+      #addBtn:active {
+        transform: scale(0.95);
+      }
+      #addBtn:disabled {
+        opacity: 0.35;
+        cursor: default;
+        pointer-events: none;
+      }
+
+      .filters {
+        display: flex;
+        gap: 4px;
+      }
+
+      .filters button {
+        flex: 1;
+        padding: 4px;
+        background: var(--border);
+        border: 1px solid var(--border-hi);
+        border-radius: 6px;
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 500;
+        font-family: inherit;
+        cursor: pointer;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
+      }
+      .filters button.active {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .filters button:hover:not(.active) {
+        color: var(--text);
+      }
+
+      /* ── List area ──────────────────────────────────────────────────────────── */
+      .list-wrap {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 10px;
+      }
+
+      ul {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        transition: border-color 0.15s;
+        animation: fadeIn 0.15s ease;
+      }
+      li:hover {
+        border-color: var(--border-hi);
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(-3px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .cb {
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--border-hi);
+        border-radius: 4px;
+        flex-shrink: 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition:
+          background 0.15s,
+          border-color 0.15s;
+      }
+      .cb.checked {
+        background: var(--green);
+        border-color: var(--green);
+      }
+      .cb.checked::after {
+        content: "";
+        width: 9px;
+        height: 5px;
+        border-left: 2px solid var(--bg);
+        border-bottom: 2px solid var(--bg);
+        transform: rotate(-45deg) translateY(-1px);
+      }
+
+      .todo-text {
+        flex: 1;
+        line-height: 1.4;
+        word-break: break-word;
+        transition: color 0.15s;
+      }
+      .todo-text.done {
+        text-decoration: line-through;
+        color: var(--muted);
+      }
+
+      .del-btn {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 14px;
+        line-height: 1;
+        padding: 2px 4px;
+        border-radius: 4px;
+        opacity: 0;
+        transition:
+          opacity 0.15s,
+          color 0.15s;
+        flex-shrink: 0;
+      }
+      li:hover .del-btn {
+        opacity: 1;
+      }
+      .del-btn:hover {
+        color: var(--danger);
+      }
+
+      /* ── Empty state ────────────────────────────────────────────────────────── */
+      .empty-state {
+        height: 100%;
+        gap: 8px;
+        padding: 0;
+      }
+      .empty-state p {
+        font-size: 12px;
+        max-width: 180px;
+        line-height: 1.5;
+      }
+
+      /* ── Footer / statusbar ─────────────────────────────────────────────────── */
+      #statusbar {
+        font-size: 11px;
+        padding: 5px 10px;
+        justify-content: flex-start;
+      }
+
+      #countLabel {
+        flex-shrink: 0;
+      }
+
+      .footer-btn {
+        background: none;
+        border: none;
+        color: var(--muted);
+        cursor: pointer;
+        font-size: 11px;
+        font-family: inherit;
+        padding: 0;
+        transition: color 0.15s;
+        flex-shrink: 0;
+      }
+      .footer-btn:hover {
+        color: var(--text);
+      }
+      #clearDone {
+        margin-left: auto;
+      }
+      #clearDone:hover {
+        color: var(--danger);
+      }
+      #fileBtn.file-active {
+        color: var(--green);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <div id="toolbar">
+        <div class="input-row">
+          <input
+            id="newTodo"
+            type="text"
+            placeholder="Add a task and press Enter…"
+            autocomplete="off"
+          />
+          <button id="addBtn" title="Add task">+</button>
+        </div>
+        <div class="filters">
+          <button class="active" data-filter="all">All</button>
+          <button data-filter="active">Active</button>
+          <button data-filter="done">Done</button>
+        </div>
+      </div>
+
+      <div class="list-wrap">
+        <ul id="todoList"></ul>
+        <div class="empty-state" id="emptyState">
+          <div class="icon">✅</div>
+          <p id="emptyMsg">Nothing here yet.<br />Add your first task above.</p>
+        </div>
+      </div>
+
+      <div id="statusbar">
+        <span id="countLabel">0 left</span>
+        <span id="statusbar-file"></span>
+        <button class="footer-btn" id="fileBtn" title="Open todo.txt file">
+          📄 Open file
+        </button>
+        <button class="footer-btn" id="clearDone">Clear completed</button>
+      </div>
+    </div>
+
+    <script src="../shared/shared.js"></script>
+    <script>
+      "use strict";
+
+      // ── IDB helper ────────────────────────────────────────────────────────────────
+      const idb = makeIdb("widgetizr-todo");
+
+      // ── todo.txt codec ────────────────────────────────────────────────────────
+      function parseTodoTxt(text) {
+        return text
+          .split("\n")
+          .map((l) => l.trim())
+          .filter(Boolean)
+          .map((line) => {
+            const done = line.startsWith("x ") || line === "x";
+            return {
+              id: crypto.randomUUID(),
+              text: done ? line.slice(2).trim() : line,
+              done,
+            };
+          });
+      }
+
+      function serializeTodoTxt(list) {
+        const active = list.filter((t) => !t.done);
+        const done = list.filter((t) => t.done);
+        return (
+          [...active, ...done]
+            .map((t) => (t.done ? "x " + t.text : t.text))
+            .join("\n") + (list.length ? "\n" : "")
+        );
+      }
+
+      // ── State ─────────────────────────────────────────────────────────────────
+      let todos = [];
+      let filter = "all";
+      let fileHandle = null;
+      let observer = null;
+      let lastSelfContent = null;
+
+      // ── File I/O ──────────────────────────────────────────────────────────────
+      function persist() {
+        if (!fileHandle) return;
+        writeFile().catch((e) => console.error("todo.txt write failed:", e));
+      }
+
+      async function writeFile() {
+        const content = serializeTodoTxt(todos);
+        const writable = await fileHandle.createWritable();
+        await writable.write(content);
+        await writable.close();
+        lastSelfContent = content;
+      }
+
+      const handleFileChange = makeFileChangeHandler({
+        onModified: reloadFromFile,
+        onReconnect: async () => {
+          if (!fileHandle) throw new Error();
+          const file = await fileHandle.getFile();
+          todos = parseTodoTxt(await file.text());
+          render();
+          if (observer) {
+            observer.disconnect();
+            observer = null;
+          }
+          observer = await observeFile(fileHandle, handleFileChange);
+        },
+        onDisconnect: disconnect,
+      });
+
+      async function reloadFromFile() {
+        if (!fileHandle) return;
+        try {
+          const file = await fileHandle.getFile();
+          const text = await file.text();
+          if (text === lastSelfContent) return;
+          todos = parseTodoTxt(text);
+          render();
+        } catch (_) {}
+      }
+
+      // ── File connection ───────────────────────────────────────────────────────
+      async function openFile() {
+        if (!window.showOpenFilePicker) {
+          await showWidgetAlert(
+            "File system access is not available.\n\nThis widget must be opened as a file:// URL or via https://.",
+          );
+          return;
+        }
+        try {
+          [fileHandle] = await window.showOpenFilePicker({
+            types: [
+              {
+                description: "Todo file",
+                accept: { "text/plain": [".txt", ".md"] },
+              },
+            ],
+            multiple: false,
+          });
+          await idb.set("file", fileHandle);
+          await enterFileMode();
+        } catch (e) {
+          if (e.name !== "AbortError") console.error("openFile:", e);
+        }
+      }
+
+      async function enterFileMode() {
+        const file = await fileHandle.getFile();
+        todos = parseTodoTxt(await file.text());
+        observer = await observeFile(fileHandle, handleFileChange);
+        updateUI();
+        render();
+      }
+
+      async function disconnect() {
+        if (observer) {
+          observer.disconnect();
+          observer = null;
+        }
+        fileHandle = null;
+        todos = [];
+        await idb.del("file");
+        updateUI();
+        render();
+      }
+
+      // ── UI state ──────────────────────────────────────────────────────────────
+      function updateUI() {
+        const fileBtn = document.getElementById("fileBtn");
+        const fileStatus = document.getElementById("statusbar-file");
+        const input = document.getElementById("newTodo");
+        const addBtn = document.getElementById("addBtn");
+        if (fileHandle) {
+          fileBtn.textContent = "⏏ Disconnect";
+          fileBtn.title = "Disconnect from " + fileHandle.name;
+          fileBtn.classList.add("file-active");
+          fileStatus.textContent = "📄 " + fileHandle.name;
+          fileStatus.style.display = "inline";
+          input.disabled = false;
+          input.placeholder = "Add a task and press Enter…";
+          syncAddBtn();
+        } else {
+          fileBtn.textContent = "📄 Open file";
+          fileBtn.title = "Open todo.txt file";
+          fileBtn.classList.remove("file-active");
+          fileStatus.style.display = "none";
+          fileStatus.textContent = "";
+          input.disabled = true;
+          input.placeholder = "Open a file to get started…";
+          addBtn.disabled = true;
+        }
+      }
+
+      // ── Render ────────────────────────────────────────────────────────────────
+      const list = document.getElementById("todoList");
+      const emptyState = document.getElementById("emptyState");
+      const emptyMsg = document.getElementById("emptyMsg");
+      const countLabel = document.getElementById("countLabel");
+
+      function visible() {
+        if (filter === "active") return todos.filter((t) => !t.done);
+        if (filter === "done") return todos.filter((t) => t.done);
+        return todos;
+      }
+
+      function render() {
+        const items = visible();
+        list.innerHTML = "";
+        items.forEach((t) => {
+          const li = document.createElement("li");
+          const cb = document.createElement("div");
+          cb.className = "cb" + (t.done ? " checked" : "");
+          cb.addEventListener("click", () => toggle(t.id));
+          const span = document.createElement("span");
+          span.className = "todo-text" + (t.done ? " done" : "");
+          span.textContent = t.text;
+          const del = document.createElement("button");
+          del.className = "del-btn";
+          del.textContent = "✕";
+          del.title = "Delete";
+          del.addEventListener("click", () => remove(t.id));
+          li.appendChild(cb);
+          li.appendChild(span);
+          li.appendChild(del);
+          list.appendChild(li);
+        });
+
+        const active = todos.filter((t) => !t.done).length;
+        countLabel.textContent = active === 1 ? "1 left" : `${active} left`;
+
+        if (!fileHandle) {
+          emptyState.classList.add("visible");
+          emptyMsg.innerHTML =
+            "Open a <strong>todo.txt</strong> file<br>to get started.";
+          return;
+        }
+        if (items.length === 0) {
+          emptyState.classList.add("visible");
+          emptyMsg.innerHTML =
+            todos.length === 0
+              ? "Nothing here yet.<br>Add your first task above."
+              : "No tasks match this filter.";
+        } else {
+          emptyState.classList.remove("visible");
+        }
+      }
+
+      // ── Mutations ─────────────────────────────────────────────────────────────
+      function addTodo(text) {
+        text = text.trim();
+        if (!text || !fileHandle) return;
+        todos.unshift({
+          id: uid(),
+          text,
+          done: false,
+        });
+        persist();
+        render();
+      }
+
+      function toggle(id) {
+        const t = todos.find((t) => t.id === id);
+        if (t) {
+          t.done = !t.done;
+          persist();
+          render();
+        }
+      }
+
+      function remove(id) {
+        todos = todos.filter((t) => t.id !== id);
+        persist();
+        render();
+      }
+
+      function clearDone() {
+        todos = todos.filter((t) => !t.done);
+        persist();
+        render();
+      }
+
+      // ── Events ────────────────────────────────────────────────────────────────
+      const input = document.getElementById("newTodo");
+      const addBtn = document.getElementById("addBtn");
+
+      function syncAddBtn() {
+        addBtn.disabled = !fileHandle || !input.value.trim();
+      }
+
+      input.addEventListener("input", syncAddBtn);
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          if (!fileHandle) return;
+          addTodo(input.value);
+          input.value = "";
+          syncAddBtn();
+        }
+      });
+      addBtn.addEventListener("click", () => {
+        if (!fileHandle) return;
+        addTodo(input.value);
+        input.value = "";
+        syncAddBtn();
+        input.focus();
+      });
+
+      document.querySelectorAll(".filters button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          filter = btn.dataset.filter;
+          document
+            .querySelectorAll(".filters button")
+            .forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          render();
+        });
+      });
+
+      document.getElementById("clearDone").addEventListener("click", clearDone);
+      document.getElementById("fileBtn").addEventListener("click", () => {
+        if (fileHandle) disconnect();
+        else openFile();
+      });
+
+      // ── Init ──────────────────────────────────────────────────────────────────
+      async function init() {
+        let fileRestored = false;
+        await restoreHandle(
+          idb,
+          "file",
+          async (h) => {
+            fileHandle = h;
+            await enterFileMode();
+            fileRestored = true;
+          },
+          async () => {
+            fileHandle = null;
+          },
+        );
+        if (!fileRestored) {
+          updateUI();
+          render();
+        }
+      }
+
+      init();
+    </script>
+  </body>
+</html>

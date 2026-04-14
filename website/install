@@ -1,0 +1,112 @@
+#!/bin/sh
+set -e
+
+VERSION_URL="https://widgetizr.app/version.txt"
+INSTALL_URL="https://github.com/widgetizr/widgetizr/releases/latest/download/widgetizr.js"
+
+DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/widgetizr"
+BIN_DIR="$HOME/.local/bin"
+LAUNCHER="$BIN_DIR/widgetizr"
+DESKTOP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
+AUTOSTART_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/autostart"
+JS_FILE="$DATA_DIR/widgetizr.js"
+VERSION_FILE="$DATA_DIR/version.txt"
+
+UPDATE_MODE="${WIDGETIZR_UPDATE:-0}"
+
+LATEST_VERSION=$(curl -fsSL --max-time 5 "$VERSION_URL" 2>/dev/null | tr -d '[:space:]' || true)
+
+if [ -z "$LATEST_VERSION" ]; then
+    if [ -f "$JS_FILE" ]; then
+        exit 0
+    else
+        echo "Error: Unable to reach widgetizr.app. Check your network connection." >&2
+        exit 1
+    fi
+fi
+
+CURRENT_VERSION=""
+if [ -f "$VERSION_FILE" ]; then
+    CURRENT_VERSION=$(tr -d '[:space:]' < "$VERSION_FILE")
+fi
+
+if [ "$LATEST_VERSION" = "$CURRENT_VERSION" ] && [ -f "$JS_FILE" ]; then
+    if [ "$UPDATE_MODE" != "1" ]; then
+        echo "Widgetizr is already up to date (v$CURRENT_VERSION)."
+    fi
+    exit 0
+fi
+
+mkdir -p "$DATA_DIR"
+
+if [ "$UPDATE_MODE" != "1" ]; then
+    echo "Downloading Widgetizr v$LATEST_VERSION..."
+    echo "Note: Widgetizr may fetch https://widgetizr.app/version.txt to notify about updates."
+fi
+
+curl -fsSL "$INSTALL_URL" -o "$JS_FILE.new"
+mv "$JS_FILE.new" "$JS_FILE"
+
+WIDGETS_URL="https://github.com/widgetizr/widgetizr/releases/latest/download/widgets.tar.gz"
+WIDGETS_DIR="$DATA_DIR/widgets"
+mkdir -p "$WIDGETS_DIR"
+curl -fsSL "$WIDGETS_URL" | tar -xz -C "$WIDGETS_DIR" --strip-components=1
+
+printf '%s\n' "$LATEST_VERSION" > "$VERSION_FILE.new"
+mv "$VERSION_FILE.new" "$VERSION_FILE"
+
+mkdir -p "$BIN_DIR"
+cat > "$LAUNCHER.new" << EOF
+#!/bin/sh
+if command -v gjs > /dev/null 2>&1; then
+    exec gjs -m "$DATA_DIR/widgetizr.js" "\$@"
+elif command -v cjs > /dev/null 2>&1; then
+    exec cjs -m "$DATA_DIR/widgetizr.js" "\$@"
+else
+    echo "Error: Widgetizr requires gjs or cjs, but neither was found." >&2
+    echo "  Debian / Ubuntu / Mint:  sudo apt install gjs" >&2
+    echo "  Fedora / RHEL:           sudo dnf install gjs" >&2
+    echo "  Arch:                    sudo pacman -S gjs" >&2
+    exit 1
+fi
+EOF
+chmod +x "$LAUNCHER.new"
+mv "$LAUNCHER.new" "$LAUNCHER"
+
+mkdir -p "$DESKTOP_DIR"
+cat > "$DESKTOP_DIR/widgetizr.desktop.new" << EOF
+[Desktop Entry]
+Name=Widgetizr
+Comment=Desktop widgets for Linux
+Exec=$LAUNCHER
+Type=Application
+Categories=Utility;
+StartupNotify=false
+EOF
+mv "$DESKTOP_DIR/widgetizr.desktop.new" "$DESKTOP_DIR/widgetizr.desktop"
+
+if [ "$UPDATE_MODE" = "1" ]; then
+    printf 'updated:%s\n' "$LATEST_VERSION"
+else
+    printf '✓ Downloaded Widgetizr v%s (with widgets)\n' "$LATEST_VERSION"
+    printf '✓ Launcher created at %s\n' "$LAUNCHER"
+    printf '✓ Desktop entry created at %s\n' "$DESKTOP_DIR/widgetizr.desktop"
+    case ":$PATH:" in
+        *":$BIN_DIR:"*) ;;
+        *) printf 'Note: %s is not in your PATH. Add it to your shell profile to use the widgetizr command.\n' "$BIN_DIR" ;;
+    esac
+
+    if [ -t 0 ]; then
+        printf 'Add Widgetizr to startup applications? [y/N] '
+        read -r autostart_choice
+        case "$autostart_choice" in
+            [Yy]*)
+                mkdir -p "$AUTOSTART_DIR"
+                cp "$DESKTOP_DIR/widgetizr.desktop" "$AUTOSTART_DIR/widgetizr.desktop"
+                printf '✓ Added to startup applications\n'
+                ;;
+        esac
+    fi
+
+    printf 'Done! Run '"'"'widgetizr'"'"' to start.\n'
+fi

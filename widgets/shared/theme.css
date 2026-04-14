@@ -1,0 +1,17 @@
+:root {
+  --bg: #1e1e2e;
+  --surface: #181825;
+  --border: #313244;
+  --border-hi: #45475a;
+  --muted: #585b70;
+  --text: #cdd6f4;
+  --accent: #89b4fa;
+  --accent-h: #b4d0fb;
+  --green: #a6e3a1;
+  --green-bg: #1e3a2e;
+  --danger: #f38ba8;
+  --warn: #f9e2af;
+  --on-accent: #1e1e2e;
+  --overlay: rgba(0, 0, 0, 0.6);
+  --radius: 6px;
+}

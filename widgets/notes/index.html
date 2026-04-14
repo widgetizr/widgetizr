@@ -1,0 +1,889 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Notes</title>
+    <link rel="stylesheet" href="../shared/theme.css" />
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="../shared/toolbar.css" />
+    <link rel="stylesheet" href="../shared/statusbar.css" />
+    <link rel="stylesheet" href="../shared/modal.css" />
+    <link rel="stylesheet" href="../shared/buttons.css" />
+    <link rel="stylesheet" href="../shared/empty-state.css" />
+    <style>
+      #statusbar {
+        padding: 3px 10px;
+      }
+      #modal {
+        gap: 12px;
+      }
+
+      #editor-wrap {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      #note-title {
+        background: var(--surface);
+        color: var(--text);
+        border: none;
+        border-bottom: 1px solid var(--border);
+        padding: 8px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        outline: none;
+        flex-shrink: 0;
+        letter-spacing: 0.01em;
+      }
+
+      #note-title::placeholder {
+        color: var(--muted);
+      }
+
+      #note-body {
+        flex: 1;
+        background: var(--bg);
+        color: var(--text);
+        border: none;
+        resize: none;
+        padding: 12px;
+        font-size: 13px;
+        line-height: 1.7;
+        font-family: inherit;
+        outline: none;
+        overflow-y: auto;
+      }
+
+      #note-body::placeholder {
+        color: var(--border-hi);
+      }
+      #note-body::-webkit-scrollbar {
+        width: 5px;
+      }
+      #note-body::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      #note-body::-webkit-scrollbar-thumb {
+        background: var(--border-hi);
+        border-radius: 3px;
+      }
+
+      #word-count {
+        flex-shrink: 0;
+      }
+
+      #limit-warning {
+        color: var(--danger);
+        display: none;
+        flex-shrink: 0;
+      }
+
+      #save-indicator {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        transition: color 0.3s;
+        flex-shrink: 0;
+      }
+
+      #save-indicator.saved {
+        color: var(--green);
+      }
+      #save-indicator.unsaved {
+        color: var(--warn);
+      }
+      #save-indicator.error {
+        color: var(--danger);
+      }
+      #save-indicator.loading {
+        color: var(--muted);
+      }
+
+      #link-pill {
+        position: fixed;
+        bottom: 32px;
+        right: 10px;
+        background: var(--border);
+        color: var(--text);
+        border: 1px solid var(--border-hi);
+        border-radius: 20px;
+        padding: 4px 12px 4px 9px;
+        font-size: 11px;
+        cursor: pointer;
+        display: none;
+        align-items: center;
+        gap: 5px;
+        white-space: nowrap;
+        max-width: 240px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        transition: background 0.15s;
+        z-index: 10;
+        user-select: none;
+      }
+
+      #link-pill:hover {
+        background: var(--border-hi);
+      }
+
+      #link-pill.visible {
+        display: flex;
+      }
+
+      #link-pill-icon {
+        opacity: 0.7;
+        flex-shrink: 0;
+      }
+
+      #link-pill-text {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      #save-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: currentColor;
+        flex-shrink: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="toolbar">
+      <select
+        id="note-select"
+        class="toolbar-select"
+        title="Select note"
+        disabled
+      ></select>
+      <button class="icon-btn" id="btn-new" title="New note" disabled>
+        ＋
+      </button>
+      <button
+        class="icon-btn danger"
+        id="btn-delete"
+        title="Delete note"
+        disabled
+      >
+        🗑
+      </button>
+      <button
+        class="icon-btn"
+        id="btn-folder"
+        title="Open folder to sync notes as .md files"
+        disabled
+      >
+        📁
+      </button>
+    </div>
+
+    <div id="link-pill" title="Open link (Ctrl+Enter)">
+      <span id="link-pill-icon">↗</span>
+      <span id="link-pill-text"></span>
+    </div>
+
+    <div id="editor-wrap">
+      <input
+        id="note-title"
+        type="text"
+        placeholder="Note title…"
+        spellcheck="false"
+        disabled
+      />
+      <textarea
+        id="note-body"
+        placeholder="Start writing…"
+        spellcheck="true"
+        disabled
+      ></textarea>
+    </div>
+
+    <div id="statusbar">
+      <span id="word-count">0 words</span>
+      <span id="statusbar-file"></span>
+      <span id="limit-warning">⚠ 1000-file limit reached</span>
+      <span id="save-indicator" class="loading">
+        <span id="save-dot"></span>
+        <span id="save-label">Loading…</span>
+      </span>
+    </div>
+
+    <div id="modal-overlay">
+      <div id="modal">
+        <h3>New Note</h3>
+        <input
+          id="new-title-input"
+          class="modal-input"
+          type="text"
+          placeholder="Note title (use / for subfolders)…"
+          maxlength="200"
+        />
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
+          <button class="btn btn-primary" id="modal-confirm">Create</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="../shared/shared.js"></script>
+    <script>
+      "use strict";
+
+      const idb = makeIdb("widgetizr-notes");
+
+      // ── State ─────────────────────────────────────────────────────────────────
+      let store = {};
+      let activeId = null;
+      let saveTimer = null;
+      let isDirty = false;
+      let dirHandle = null;
+      let observer = null;
+
+      const MAX_FILES = 1000;
+      let fileLimitReached = false;
+
+      // ── DOM refs ──────────────────────────────────────────────────────────────
+      const noteSelect = document.getElementById("note-select");
+      const noteTitle = document.getElementById("note-title");
+      const noteBody = document.getElementById("note-body");
+      const wordCount = document.getElementById("word-count");
+      const saveIndicator = document.getElementById("save-indicator");
+      const saveLabel = document.getElementById("save-label");
+      const folderStatus = document.getElementById("statusbar-file");
+      const limitWarning = document.getElementById("limit-warning");
+      const btnNew = document.getElementById("btn-new");
+      const btnDelete = document.getElementById("btn-delete");
+      const btnFolder = document.getElementById("btn-folder");
+      const modalOverlay = document.getElementById("modal-overlay");
+      const newTitleInput = document.getElementById("new-title-input");
+      const modalCancel = document.getElementById("modal-cancel");
+      const modalConfirm = document.getElementById("modal-confirm");
+      const linkPill = document.getElementById("link-pill");
+      const linkPillText = document.getElementById("link-pill-text");
+
+      // ── Link detection ────────────────────────────────────────────────────────
+      const URL_RE =
+        /(?:https?|ftp|zed|vscode|obsidian|file):\/\/[^\s)>\]'"]+/g;
+
+      function urlOnCurrentLine() {
+        const pos = noteBody.selectionStart;
+        const text = noteBody.value;
+        const lineStart = text.lastIndexOf("\n", pos - 1) + 1;
+        const lineEnd = text.indexOf("\n", pos);
+        const line = text.slice(
+          lineStart,
+          lineEnd === -1 ? undefined : lineEnd,
+        );
+        URL_RE.lastIndex = 0;
+        const m = URL_RE.exec(line);
+        return m ? m[0] : null;
+      }
+
+      function updateLinkPill() {
+        const url = urlOnCurrentLine();
+        if (url) {
+          linkPillText.textContent = url;
+          linkPill.classList.add("visible");
+        } else {
+          linkPill.classList.remove("visible");
+        }
+      }
+
+      function openCurrentLineUrl() {
+        const url = urlOnCurrentLine();
+        if (url) window.open(url, "_blank", "noopener");
+      }
+
+      linkPill.addEventListener("click", openCurrentLineUrl);
+      noteBody.addEventListener("keyup", updateLinkPill);
+      noteBody.addEventListener("click", (e) => {
+        if (e.ctrlKey) openCurrentLineUrl();
+        else updateLinkPill();
+      });
+      noteBody.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && e.ctrlKey) {
+          e.preventDefault();
+          openCurrentLineUrl();
+        }
+      });
+
+      // ── Utilities ─────────────────────────────────────────────────────────────
+      function sanitizeComponent(s) {
+        const r = s
+          .trim()
+          .replace(/[\\:*?"<>|]/g, "-")
+          .replace(/\s+/g, " ")
+          .slice(0, 80);
+        if (r === "." || r === "..") return "-";
+        return r || "Untitled";
+      }
+
+      function sanitizeFilename(title) {
+        return sanitizeComponent(title);
+      }
+
+      function sanitizeFilePath(rawTitle) {
+        return (
+          rawTitle
+            .split("/")
+            .filter(Boolean)
+            .map(sanitizeComponent)
+            .join("/") || "Untitled"
+        );
+      }
+
+      function noteExtension(name) {
+        if (name.endsWith(".txt")) return ".txt";
+        return ".md";
+      }
+
+      function titleFromFilename(name) {
+        const ext = noteExtension(name);
+        return name.slice(0, -ext.length);
+      }
+
+      function isNoteFile(name) {
+        return name.endsWith(".md") || name.endsWith(".txt");
+      }
+
+      function uniqueFilename(base) {
+        let name = base + ".md";
+        if (!store[name]) return name;
+        let i = 2;
+        while (store[`${base}_${i}.md`]) i++;
+        return `${base}_${i}.md`;
+      }
+
+      function sortedIds() {
+        return Object.keys(store).sort(
+          (a, b) => (store[b].updatedAt || 0) - (store[a].updatedAt || 0),
+        );
+      }
+
+      async function getOrCreateDirHandle(root, components) {
+        let h = root;
+        for (const c of components)
+          h = await h.getDirectoryHandle(c, { create: true });
+        return h;
+      }
+
+      async function getDirHandle(root, components) {
+        let h = root;
+        for (const c of components) h = await h.getDirectoryHandle(c);
+        return h;
+      }
+
+      // ── UI state ──────────────────────────────────────────────────────────────
+      function updateWordCount() {
+        const text = noteBody.value.trim();
+        const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
+        const chars = noteBody.value.length;
+        wordCount.textContent = `${words} word${words !== 1 ? "s" : ""} · ${chars} char${chars !== 1 ? "s" : ""}`;
+      }
+
+      function markUnsaved() {
+        isDirty = true;
+        saveIndicator.className = "unsaved";
+        saveLabel.textContent = "Unsaved…";
+      }
+
+      function markSaved() {
+        isDirty = false;
+        saveIndicator.className = "saved";
+        saveLabel.textContent = "Saved";
+      }
+
+      function markError(msg) {
+        saveIndicator.className = "error";
+        saveLabel.textContent = msg || "Error";
+      }
+
+      function markLoading() {
+        saveIndicator.className = "loading";
+        saveLabel.textContent = "Loading…";
+      }
+
+      function updateFolderUI() {
+        if (dirHandle) {
+          btnFolder.title = "Disconnect folder";
+          btnFolder.textContent = "⏏";
+          btnFolder.classList.add("file-active");
+          folderStatus.textContent = "📁 " + dirHandle.name;
+          folderStatus.style.display = "inline";
+          btnNew.disabled = false;
+          btnDelete.disabled = !activeId;
+          noteSelect.disabled = false;
+          noteBody.placeholder = "Start writing…";
+        } else {
+          btnFolder.title = "Open folder to sync notes as .md files";
+          btnFolder.textContent = "📁";
+          btnFolder.classList.remove("file-active");
+          folderStatus.style.display = "none";
+          folderStatus.textContent = "";
+          btnNew.disabled = true;
+          btnDelete.disabled = true;
+          noteSelect.disabled = true;
+          noteBody.placeholder = "Open a folder to get started…";
+        }
+      }
+
+      // ── Note list ─────────────────────────────────────────────────────────────
+      function rebuildSelect() {
+        noteSelect.innerHTML = "";
+        const ids = sortedIds();
+        if (ids.length === 0) {
+          const opt = document.createElement("option");
+          opt.value = "";
+          opt.textContent = dirHandle
+            ? "— no notes yet —"
+            : "— no folder open —";
+          noteSelect.appendChild(opt);
+          return;
+        }
+        for (const id of ids) {
+          const opt = document.createElement("option");
+          opt.value = id;
+          const ext = noteExtension(id.split("/").pop());
+          opt.textContent = id.slice(0, -ext.length);
+          opt.selected = id === activeId;
+          noteSelect.appendChild(opt);
+        }
+      }
+
+      function loadNote(id) {
+        if (!id || !store[id]) {
+          noteTitle.value = "";
+          noteBody.value = "";
+          noteTitle.disabled = true;
+          noteBody.disabled = true;
+          btnDelete.disabled = true;
+          saveIndicator.className = "";
+          saveLabel.textContent = "";
+          updateWordCount();
+          return;
+        }
+        activeId = id;
+        if (id) localStorage.setItem("widgetizr-notes-last", id);
+        const ext = noteExtension(id.split("/").pop());
+        noteTitle.value = id.slice(0, -ext.length);
+        noteBody.value = store[id].body || "";
+        noteTitle.disabled = false;
+        noteBody.disabled = false;
+        btnDelete.disabled = false;
+        markSaved();
+        updateWordCount();
+      }
+
+      // ── Save ──────────────────────────────────────────────────────────────────
+      function scheduleSave() {
+        if (!dirHandle) return;
+        markUnsaved();
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(commitSave, 800);
+      }
+
+      function commitSave() {
+        commitSaveFolder().catch(() => markError("Save failed"));
+      }
+
+      async function commitSaveFolder() {
+        if (!activeId || !store[activeId] || !dirHandle) return;
+
+        const rawTitle = noteTitle.value.trim() || "Untitled";
+        const newSafePath = sanitizeFilePath(rawTitle);
+        const ext = noteExtension(activeId.split("/").pop());
+        const newRelFilename = newSafePath + ext;
+        const body = noteBody.value;
+
+        const isRename = newRelFilename !== activeId;
+        const hasCollision = isRename && !!store[newRelFilename];
+
+        if (isRename && !hasCollision) {
+          const newParts = newRelFilename.split("/");
+          const newFilename = newParts[newParts.length - 1];
+          const newDirParts = newParts.slice(0, -1);
+          const newParentHandle =
+            newDirParts.length > 0
+              ? await getOrCreateDirHandle(dirHandle, newDirParts)
+              : dirHandle;
+          const newHandle = await newParentHandle.getFileHandle(newFilename, {
+            create: true,
+          });
+          const writable = await newHandle.createWritable();
+          await writable.write(body);
+          await writable.close();
+
+          try {
+            const oldParts = activeId.split("/");
+            const oldFilename = oldParts[oldParts.length - 1];
+            const oldDirParts = oldParts.slice(0, -1);
+            const oldParentHandle =
+              oldDirParts.length > 0
+                ? await getDirHandle(dirHandle, oldDirParts)
+                : dirHandle;
+            await oldParentHandle.removeEntry(oldFilename);
+          } catch (_) {}
+
+          const oldId = activeId;
+          store[newRelFilename] = {
+            title: titleFromFilename(newFilename),
+            body,
+            handle: newHandle,
+            updatedAt: Date.now(),
+          };
+          delete store[oldId];
+          activeId = newRelFilename;
+          noteTitle.value = newSafePath;
+          rebuildSelect();
+          markSaved();
+        } else {
+          const handle = store[activeId].handle;
+          const writable = await handle.createWritable();
+          await writable.write(body);
+          await writable.close();
+
+          store[activeId].title = titleFromFilename(activeId.split("/").pop());
+          store[activeId].body = body;
+          store[activeId].updatedAt = Date.now();
+
+          const ext = noteExtension(activeId.split("/").pop());
+          noteTitle.value = activeId.slice(0, -ext.length);
+          if (hasCollision) {
+            markError("Name already taken");
+          } else {
+            markSaved();
+          }
+        }
+      }
+
+      // ── Folder mode ───────────────────────────────────────────────────────────
+      async function openFolder() {
+        if (!window.showDirectoryPicker) {
+          await showWidgetAlert(
+            "File system access is not available.\n\nThis widget must be opened as a file:// URL or via https://.",
+          );
+          return;
+        }
+        try {
+          dirHandle = await window.showDirectoryPicker({
+            mode: "readwrite",
+          });
+          await idb.set("folder", dirHandle);
+          await enterFolderMode();
+        } catch (e) {
+          if (e.name !== "AbortError") console.error("openFolder:", e);
+        }
+      }
+
+      async function scanDirectory(handle, prefix, count) {
+        for await (const [name, child] of handle.entries()) {
+          if (count.n >= MAX_FILES) {
+            fileLimitReached = true;
+            return;
+          }
+          if (child.kind === "directory") {
+            await scanDirectory(child, prefix + name + "/", count);
+          } else if (child.kind === "file" && isNoteFile(name)) {
+            try {
+              const file = await child.getFile();
+              const body = await file.text();
+              const relPath = prefix + name;
+              store[relPath] = {
+                title: titleFromFilename(name),
+                body,
+                handle: child,
+                updatedAt: file.lastModified,
+              };
+              count.n++;
+            } catch (_) {}
+          }
+        }
+      }
+
+      async function enterFolderMode() {
+        store = {};
+        activeId = null;
+        fileLimitReached = false;
+        const count = { n: 0 };
+        await scanDirectory(dirHandle, "", count);
+        limitWarning.style.display = fileLimitReached ? "inline" : "none";
+
+        if (typeof FileSystemObserver !== "undefined") {
+          observer = new FileSystemObserver(handleFolderChange);
+          await observer.observe(dirHandle, { recursive: true });
+        }
+
+        updateFolderUI();
+        const ids = sortedIds();
+        const lastId = localStorage.getItem("widgetizr-notes-last");
+        activeId = lastId && store[lastId] ? lastId : ids[0] || null;
+        rebuildSelect();
+        loadNote(activeId);
+      }
+
+      async function disconnect() {
+        if (observer) {
+          observer.disconnect();
+          observer = null;
+        }
+        dirHandle = null;
+        store = {};
+        activeId = null;
+        fileLimitReached = false;
+        limitWarning.style.display = "none";
+        await idb.del("folder");
+        updateFolderUI();
+        rebuildSelect();
+        loadNote(null);
+      }
+
+      function handleFolderChange(records) {
+        const reappearedPaths = new Set();
+        for (const r of records) {
+          if (
+            (r.type === "appeared" ||
+              r.type === "moved" ||
+              r.type === "modified") &&
+            r.relativePathComponents &&
+            isNoteFile(r.changedHandle.name)
+          ) {
+            reappearedPaths.add(r.relativePathComponents.join("/"));
+          }
+        }
+
+        for (const record of records) {
+          const name = record.changedHandle.name;
+          if (!isNoteFile(name)) continue;
+          (async () => {
+            let relPath = null;
+            if (record.relativePathComponents) {
+              relPath = record.relativePathComponents.join("/");
+            } else {
+              for (const [path, entry] of Object.entries(store)) {
+                if (
+                  (path === name || path.endsWith("/" + name)) &&
+                  entry.handle
+                ) {
+                  try {
+                    if (await entry.handle.isSameEntry(record.changedHandle)) {
+                      relPath = path;
+                      break;
+                    }
+                  } catch (_) {}
+                }
+              }
+            }
+
+            if (record.type === "appeared" || record.type === "moved") {
+              if (relPath && store[relPath]) {
+                await reloadExternalFile(relPath);
+              } else {
+                await loadExternalFile(relPath || name);
+              }
+            } else if (record.type === "disappeared") {
+              const key = relPath || name;
+              if (relPath && reappearedPaths.has(relPath)) return;
+              setTimeout(() => {
+                if (!store[key]) return;
+                delete store[key];
+                if (activeId === key) {
+                  activeId = sortedIds()[0] || null;
+                  rebuildSelect();
+                  loadNote(activeId);
+                } else {
+                  rebuildSelect();
+                }
+              }, 600);
+            } else if (record.type === "modified") {
+              if (relPath) await reloadExternalFile(relPath);
+            }
+          })().catch(console.error);
+        }
+      }
+
+      async function loadExternalFile(relPath) {
+        if (!dirHandle) return;
+        try {
+          const parts = relPath.split("/");
+          const filename = parts[parts.length - 1];
+          const dirParts = parts.slice(0, -1);
+          const parentHandle =
+            dirParts.length > 0
+              ? await getDirHandle(dirHandle, dirParts)
+              : dirHandle;
+          const handle = await parentHandle.getFileHandle(filename);
+          const file = await handle.getFile();
+          const body = await file.text();
+          store[relPath] = {
+            title: titleFromFilename(filename),
+            body,
+            handle,
+            updatedAt: file.lastModified,
+          };
+          rebuildSelect();
+          if (!activeId) {
+            activeId = relPath;
+            loadNote(activeId);
+          }
+        } catch (_) {}
+      }
+
+      async function reloadExternalFile(relPath) {
+        if (!dirHandle || !store[relPath]) return;
+        try {
+          const file = await store[relPath].handle.getFile();
+          const body = await file.text();
+          if (body === store[relPath].body) return;
+          store[relPath].body = body;
+          store[relPath].updatedAt = file.lastModified;
+          if (relPath === activeId) {
+            const pos = noteBody.selectionStart;
+            noteBody.value = body;
+            try {
+              noteBody.setSelectionRange(pos, pos);
+            } catch (_) {}
+            markSaved();
+          }
+        } catch (_) {}
+      }
+
+      // ── New note ──────────────────────────────────────────────────────────────
+      btnNew.addEventListener("click", () => {
+        if (!dirHandle) return;
+        newTitleInput.value = "";
+        modalOverlay.classList.add("visible");
+        newTitleInput.focus();
+      });
+
+      modalCancel.addEventListener("click", () =>
+        modalOverlay.classList.remove("visible"),
+      );
+      attachModalHandlers(modalOverlay, () =>
+        modalOverlay.classList.remove("visible"),
+      );
+
+      async function createNote() {
+        const rawTitle = newTitleInput.value.trim() || "Untitled";
+        modalOverlay.classList.remove("visible");
+        const safePath = sanitizeFilePath(rawTitle);
+        const relFilename = uniqueFilename(safePath);
+        const relParts = relFilename.split("/");
+        const actualFilename = relParts[relParts.length - 1];
+        const actualDirParts = relParts.slice(0, -1);
+        try {
+          const parentHandle =
+            actualDirParts.length > 0
+              ? await getOrCreateDirHandle(dirHandle, actualDirParts)
+              : dirHandle;
+          const handle = await parentHandle.getFileHandle(actualFilename, {
+            create: true,
+          });
+          const writable = await handle.createWritable();
+          await writable.write("");
+          await writable.close();
+          store[relFilename] = {
+            title: titleFromFilename(actualFilename),
+            body: "",
+            handle,
+            updatedAt: Date.now(),
+          };
+          activeId = relFilename;
+        } catch (e) {
+          console.error("createNote:", e);
+          return;
+        }
+        rebuildSelect();
+        loadNote(activeId);
+        noteBody.focus();
+      }
+
+      modalConfirm.addEventListener("click", createNote);
+      newTitleInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") createNote();
+        if (e.key === "Escape") modalOverlay.classList.remove("visible");
+      });
+
+      // ── Delete note ───────────────────────────────────────────────────────────
+      btnDelete.addEventListener("click", async () => {
+        if (!activeId || !dirHandle) return;
+        const title = store[activeId]?.title || "this note";
+        if (
+          !(await showWidgetConfirm(
+            `Delete "${title}"?\nThis cannot be undone.`,
+          ))
+        )
+          return;
+        try {
+          const parts = activeId.split("/");
+          const filename = parts[parts.length - 1];
+          const dirParts = parts.slice(0, -1);
+          const parentHandle =
+            dirParts.length > 0
+              ? await getDirHandle(dirHandle, dirParts)
+              : dirHandle;
+          await parentHandle.removeEntry(filename);
+        } catch (_) {}
+        delete store[activeId];
+        activeId = sortedIds()[0] || null;
+        rebuildSelect();
+        loadNote(activeId);
+      });
+
+      // ── Folder button ─────────────────────────────────────────────────────────
+      btnFolder.addEventListener("click", () => {
+        if (dirHandle) disconnect();
+        else openFolder();
+      });
+
+      // ── Editor events ─────────────────────────────────────────────────────────
+      noteTitle.addEventListener("input", scheduleSave);
+      noteBody.addEventListener("input", () => {
+        scheduleSave();
+        updateWordCount();
+      });
+      noteSelect.addEventListener("change", () => {
+        if (isDirty) commitSave();
+        loadNote(noteSelect.value);
+      });
+      document.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+          e.preventDefault();
+          clearTimeout(saveTimer);
+          commitSave();
+        }
+      });
+
+      // ── Init ──────────────────────────────────────────────────────────────────
+      async function init() {
+        btnFolder.disabled = true;
+        markLoading();
+        let folderRestored = false;
+        await restoreHandle(
+          idb,
+          "folder",
+          async (h) => {
+            dirHandle = h;
+            await enterFolderMode();
+            folderRestored = true;
+          },
+          async () => {
+            dirHandle = null;
+          },
+        );
+        if (!folderRestored) {
+          updateFolderUI();
+          rebuildSelect();
+          loadNote(null);
+        }
+        btnFolder.disabled = false;
+      }
+
+      init();
+    </script>
+  </body>
+</html>

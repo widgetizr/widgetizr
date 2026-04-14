@@ -1,0 +1,75 @@
+{
+  "lockfileVersion": 1,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "dependencies": {
+        "@girs/gdk-4.0": "^4.0.0-4.0.0-rc.1",
+        "@girs/gio-2.0": "^2.88.0-4.0.0-rc.1",
+        "@girs/gjs": "^4.0.0-rc.1",
+        "@girs/gtk-3.0": "^3.24.53-4.0.0-rc.1",
+        "@girs/gtklayershell-0.1": "^0.1.0-4.0.0-rc.1",
+        "@girs/webkit2-4.1": "^2.52.1-4.0.0-rc.1",
+        "@types/bun": "^1.3.11",
+        "@types/node": "^25.5.2",
+        "hono": "^4.12.12",
+        "valibot": "^1.3.1",
+      },
+    },
+  },
+  "packages": {
+    "@girs/atk-1.0": ["@girs/atk-1.0@2.60.0-4.0.0-rc.1", "", { "dependencies": { "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1" } }, "sha512-nWGQEPuxKQ3ReCN5EnGmWDtY2Rs/V6uSoM1ZyiynI8/6/0jK7s1lals0T6OJ5vVp95tTwMFBV1d4l1aooyayYA=="],
+
+    "@girs/cairo-1.0": ["@girs/cairo-1.0@1.0.0-4.0.0-rc.1", "", { "dependencies": { "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1" } }, "sha512-lROL1ktpkMDdw+umDEPOs+wOD7VCM1i7Ns5TQrctrYzPIDJjGJv8HRmm5cz/UEl+ovRB0s/D7q9GNeolfyAgpg=="],
+
+    "@girs/freetype2-2.0": ["@girs/freetype2-2.0@2.0.0-4.0.0-rc.1", "", { "dependencies": { "@girs/gjs": "4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1" } }, "sha512-aV1NP7apyeJPzMNDcItPVJgQLKDhbvn4BThoSzmX/1TFp/9LbWF4aIjk2hFQEF4ruoHdRqzLl69L+C9CMUtAVQ=="],
+
+    "@girs/gdk-3.0": ["@girs/gdk-3.0@3.24.53-4.0.0-rc.1", "", { "dependencies": { "@girs/cairo-1.0": "1.0.0-4.0.0-rc.1", "@girs/freetype2-2.0": "2.0.0-4.0.0-rc.1", "@girs/gdkpixbuf-2.0": "2.0.0-4.0.0-rc.1", "@girs/gio-2.0": "2.88.0-4.0.0-rc.1", "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gmodule-2.0": "2.0.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1", "@girs/harfbuzz-0.0": "13.2.1-4.0.0-rc.1", "@girs/pango-1.0": "1.57.1-4.0.0-rc.1" } }, "sha512-k/jfgpZN5ssFxnSO/yf/9QKY3wbe+/cVv1RivZi8pTpLOn8wjfvuW4bdMliMdrlAYLcaWjTXA80gNZMyS7wVBQ=="],
+
+    "@girs/gdk-4.0": ["@girs/gdk-4.0@4.0.0-4.0.0-rc.1", "", { "dependencies": { "@girs/cairo-1.0": "1.0.0-4.0.0-rc.1", "@girs/freetype2-2.0": "2.0.0-4.0.0-rc.1", "@girs/gdkpixbuf-2.0": "2.0.0-4.0.0-rc.1", "@girs/gio-2.0": "2.88.0-4.0.0-rc.1", "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gmodule-2.0": "2.0.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1", "@girs/harfbuzz-0.0": "13.2.1-4.0.0-rc.1", "@girs/pango-1.0": "1.57.1-4.0.0-rc.1", "@girs/pangocairo-1.0": "1.0.0-4.0.0-rc.1" } }, "sha512-U/iT3gtAf4ky5ChMD6T9VKsdnFdDxM6YtQOv7YZiCkON4/mNH3NGY2SFvbGEK4770gKajylwv/GKKP3QqlGOIw=="],
+
+    "@girs/gdkpixbuf-2.0": ["@girs/gdkpixbuf-2.0@2.0.0-4.0.0-rc.1", "", { "dependencies": { "@girs/gio-2.0": "2.88.0-4.0.0-rc.1", "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gmodule-2.0": "2.0.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1" } }, "sha512-Z0KPqxpXYoJ02ggUFbwrLszlpVOjdo1lJV2y0UGNPVUiCi+wRBcPfBSTx4EXTQuV6XC+ltQn2XXtZkqinDsk5g=="],
+
+    "@girs/gio-2.0": ["@girs/gio-2.0@2.88.0-4.0.0-rc.1", "", { "dependencies": { "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gmodule-2.0": "2.0.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1" } }, "sha512-kKgRID1W4uq7+LLTPYuyEw0dczHBt+dbIfR3o5E2UzlYMdrI4bDGWHO+b/3lPmA24l7SRjMDgQDnvhMlW9Q8bQ=="],
+
+    "@girs/gjs": ["@girs/gjs@4.0.0-rc.1", "", { "dependencies": { "@girs/cairo-1.0": "1.0.0-4.0.0-rc.1", "@girs/gio-2.0": "2.88.0-4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1" } }, "sha512-QwR/37kLXNtvtLuUBWoCSuTfXUb0Lnr5kbrRMk/6jxVJVvrtMrvu4taKMTPOlUFYbLLSZTC6wtDvXCp/LXYPdg=="],
+
+    "@girs/glib-2.0": ["@girs/glib-2.0@2.88.0-4.0.0-rc.1", "", { "dependencies": { "@girs/gjs": "4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1" } }, "sha512-xXIXqe5JLKfaF/5y6x8MtT45g9Ah9dEbL3bDmp5jQfgj3g6EaaJfLvTGEUmle7UcdyZ2Hm98N1Wk/LF+LwzEuw=="],
+
+    "@girs/gmodule-2.0": ["@girs/gmodule-2.0@2.0.0-4.0.0-rc.1", "", { "dependencies": { "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1" } }, "sha512-n/ny2eFMHrLFW7V2TN0jON5BD5Two6XkeQRVffRsZ9uFmZgPA91SS13TyNENj7nboGBdbyFTYr1lHmTEIT8BYw=="],
+
+    "@girs/gobject-2.0": ["@girs/gobject-2.0@2.88.0-4.0.0-rc.1", "", { "dependencies": { "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1" } }, "sha512-1ekoUho71iE7SdquGxm8HXzUrkYReIlPeT6B303Qore638qamEXNepi4JyLsHy9LZETogstwoNcNQj/9eb/JdQ=="],
+
+    "@girs/gtk-3.0": ["@girs/gtk-3.0@3.24.53-4.0.0-rc.1", "", { "dependencies": { "@girs/atk-1.0": "2.60.0-4.0.0-rc.1", "@girs/cairo-1.0": "1.0.0-4.0.0-rc.1", "@girs/freetype2-2.0": "2.0.0-4.0.0-rc.1", "@girs/gdk-3.0": "3.24.53-4.0.0-rc.1", "@girs/gdkpixbuf-2.0": "2.0.0-4.0.0-rc.1", "@girs/gio-2.0": "2.88.0-4.0.0-rc.1", "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gmodule-2.0": "2.0.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1", "@girs/harfbuzz-0.0": "13.2.1-4.0.0-rc.1", "@girs/pango-1.0": "1.57.1-4.0.0-rc.1", "@girs/xlib-2.0": "2.0.0-4.0.0-rc.1" } }, "sha512-JFu+Eo7mHBw0TmfwRARcyT9D7Y++zCzmrNBTX3ZFVQ0tX+vGzLf4h7+XBHnQkIHI5d7fPPnEZQXquxWPLrPOQw=="],
+
+    "@girs/gtklayershell-0.1": ["@girs/gtklayershell-0.1@0.1.0-4.0.0-rc.1", "", { "dependencies": { "@girs/atk-1.0": "2.60.0-4.0.0-rc.1", "@girs/cairo-1.0": "1.0.0-4.0.0-rc.1", "@girs/freetype2-2.0": "2.0.0-4.0.0-rc.1", "@girs/gdk-3.0": "3.24.53-4.0.0-rc.1", "@girs/gdkpixbuf-2.0": "2.0.0-4.0.0-rc.1", "@girs/gio-2.0": "2.88.0-4.0.0-rc.1", "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gmodule-2.0": "2.0.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1", "@girs/gtk-3.0": "3.24.53-4.0.0-rc.1", "@girs/harfbuzz-0.0": "13.2.1-4.0.0-rc.1", "@girs/pango-1.0": "1.57.1-4.0.0-rc.1", "@girs/xlib-2.0": "2.0.0-4.0.0-rc.1" } }, "sha512-LWyfOHs5X34qDcYb6uolKsAOzTAHzioigDo5g85Daf4ro+ZSVNCI6DhVhCJAd+auB7TtQytl0iZkZLY/UV8zRg=="],
+
+    "@girs/harfbuzz-0.0": ["@girs/harfbuzz-0.0@13.2.1-4.0.0-rc.1", "", { "dependencies": { "@girs/freetype2-2.0": "2.0.0-4.0.0-rc.1", "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1" } }, "sha512-Mz+hmfYGZ3NaQlbbFp7W598AaXKlQZGF+z6GzbuXlAIRjVi6HPaWO9VmyuSidESPOG0hyoy9JIOxKeDZFkPg7g=="],
+
+    "@girs/javascriptcore-4.1": ["@girs/javascriptcore-4.1@2.52.1-4.0.0-rc.1", "", { "dependencies": { "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1" } }, "sha512-t3gBkRkA87aQVnyrA3AW7rC6UMxq7xPbPlZ5tT+g294qCEI0i2+MdQiTI8Q9Ri0gRdTyVjp9eyfOtXcUHvj6fQ=="],
+
+    "@girs/pango-1.0": ["@girs/pango-1.0@1.57.1-4.0.0-rc.1", "", { "dependencies": { "@girs/cairo-1.0": "1.0.0-4.0.0-rc.1", "@girs/freetype2-2.0": "2.0.0-4.0.0-rc.1", "@girs/gio-2.0": "2.88.0-4.0.0-rc.1", "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gmodule-2.0": "2.0.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1", "@girs/harfbuzz-0.0": "13.2.1-4.0.0-rc.1" } }, "sha512-QnSRy5sbzzuEwM421hfQP86zw5HdDABL+4+6D8I1usNkIa1YD9/l69F6syeEk0RQ4Fu4FSbQLAxVdnQWFLCBTg=="],
+
+    "@girs/pangocairo-1.0": ["@girs/pangocairo-1.0@1.0.0-4.0.0-rc.1", "", { "dependencies": { "@girs/cairo-1.0": "1.0.0-4.0.0-rc.1", "@girs/freetype2-2.0": "2.0.0-4.0.0-rc.1", "@girs/gio-2.0": "2.88.0-4.0.0-rc.1", "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gmodule-2.0": "2.0.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1", "@girs/harfbuzz-0.0": "13.2.1-4.0.0-rc.1", "@girs/pango-1.0": "1.57.1-4.0.0-rc.1" } }, "sha512-JF/5U2mIs49JKtibxaTFnoAiLakpk4UmvHC4/yhVL4avM35Gib81AKHnCHb4YMVovZeVO46fIrPw31q2sEKN0w=="],
+
+    "@girs/soup-3.0": ["@girs/soup-3.0@3.6.6-4.0.0-rc.1", "", { "dependencies": { "@girs/gio-2.0": "2.88.0-4.0.0-rc.1", "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gmodule-2.0": "2.0.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1" } }, "sha512-M7it40+7Q0QpiQ/cuiig4BJZmWEx5ys9jC49pOv9k9bq92n6jz2DaLi1CMgC0mVQAt4OSAow4RzN28WkUp5fOw=="],
+
+    "@girs/webkit2-4.1": ["@girs/webkit2-4.1@2.52.1-4.0.0-rc.1", "", { "dependencies": { "@girs/atk-1.0": "2.60.0-4.0.0-rc.1", "@girs/cairo-1.0": "1.0.0-4.0.0-rc.1", "@girs/freetype2-2.0": "2.0.0-4.0.0-rc.1", "@girs/gdk-3.0": "3.24.53-4.0.0-rc.1", "@girs/gdkpixbuf-2.0": "2.0.0-4.0.0-rc.1", "@girs/gio-2.0": "2.88.0-4.0.0-rc.1", "@girs/gjs": "4.0.0-rc.1", "@girs/glib-2.0": "2.88.0-4.0.0-rc.1", "@girs/gmodule-2.0": "2.0.0-4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1", "@girs/gtk-3.0": "3.24.53-4.0.0-rc.1", "@girs/harfbuzz-0.0": "13.2.1-4.0.0-rc.1", "@girs/javascriptcore-4.1": "2.52.1-4.0.0-rc.1", "@girs/pango-1.0": "1.57.1-4.0.0-rc.1", "@girs/soup-3.0": "3.6.6-4.0.0-rc.1", "@girs/xlib-2.0": "2.0.0-4.0.0-rc.1" } }, "sha512-lKAm4z3r+GzThm/uy/s39j8qCE+qGmNq6v4BiexGNQblFIankpYjAHttazS3dYj+tduvjTgafAoh12gm2Z9unQ=="],
+
+    "@girs/xlib-2.0": ["@girs/xlib-2.0@2.0.0-4.0.0-rc.1", "", { "dependencies": { "@girs/gjs": "4.0.0-rc.1", "@girs/gobject-2.0": "2.88.0-4.0.0-rc.1" } }, "sha512-g1jWt1hULX4rxnUrM8OS4AJBPwi6g8P7FmyrXbFwY2N6e47c0CVsec5rGdJO5B7aAreMzyuatU+5mdGKVPvnRQ=="],
+
+    "@types/bun": ["@types/bun@1.3.11", "", { "dependencies": { "bun-types": "1.3.11" } }, "sha512-5vPne5QvtpjGpsGYXiFyycfpDF2ECyPcTSsFBMa0fraoxiQyMJ3SmuQIGhzPg2WJuWxVBoxWJ2kClYTcw/4fAg=="],
+
+    "@types/node": ["@types/node@25.5.2", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-tO4ZIRKNC+MDWV4qKVZe3Ql/woTnmHDr5JD8UI5hn2pwBrHEwOEMZK7WlNb5RKB6EoJ02gwmQS9OrjuFnZYdpg=="],
+
+    "bun-types": ["bun-types@1.3.11", "", { "dependencies": { "@types/node": "*" } }, "sha512-1KGPpoxQWl9f6wcZh57LvrPIInQMn2TQ7jsgxqpRzg+l0QPOFvJVH7HmvHo/AiPgwXy+/Thf6Ov3EdVn1vOabg=="],
+
+    "hono": ["hono@4.12.12", "", {}, "sha512-p1JfQMKaceuCbpJKAPKVqyqviZdS0eUxH9v82oWo1kb9xjQ5wA6iP3FNVAPDFlz5/p7d45lO+BpSk1tuSZMF4Q=="],
+
+    "undici-types": ["undici-types@7.18.2", "", {}, "sha512-AsuCzffGHJybSaRrmr5eHr81mwJU3kjw6M+uprWvCXiNeN9SOGwQ3Jn8jb8m3Z6izVgknn1R0FTCEAP2QrLY/w=="],
+
+    "valibot": ["valibot@1.3.1", "", { "peerDependencies": { "typescript": ">=5" }, "optionalPeers": ["typescript"] }, "sha512-sfdRir/QFM0JaF22hqTroPc5xy4DimuGQVKFrzF1YfGwaS1nJot3Y8VqMdLO2Lg27fMzat2yD3pY5PbAYO39Gg=="],
+
+    "bun-types/@types/node": ["@types/node@25.5.0", "", { "dependencies": { "undici-types": "~7.18.0" } }, "sha512-jp2P3tQMSxWugkCUKLRPVUpGaL5MVFwF8RDuSRztfwgN1wmqJeMSbKlnEtQqU8UrhTmzEmZdu2I6v2dpp7XIxw=="],
+  }
+}
