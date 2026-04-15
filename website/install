@@ -11,6 +11,8 @@ DESKTOP_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/applications"
 AUTOSTART_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/autostart"
 JS_FILE="$DATA_DIR/widgetizr.js"
 VERSION_FILE="$DATA_DIR/version.txt"
+ICON_FILE="$DATA_DIR/logo.svg"
+ICON_URL="https://widgetizr.app/favicon.svg"
 
 UPDATE_MODE="${WIDGETIZR_UPDATE:-0}"
 
@@ -47,6 +49,9 @@ fi
 curl -fsSL "$INSTALL_URL" -o "$JS_FILE.new"
 mv "$JS_FILE.new" "$JS_FILE"
 
+curl -fsSL "$ICON_URL" -o "$ICON_FILE.new"
+mv "$ICON_FILE.new" "$ICON_FILE"
+
 WIDGETS_URL="https://github.com/widgetizr/widgetizr/releases/latest/download/widgets.tar.gz"
 WIDGETS_DIR="$DATA_DIR/widgets"
 mkdir -p "$WIDGETS_DIR"
@@ -79,6 +84,7 @@ cat > "$DESKTOP_DIR/widgetizr.desktop.new" << EOF
 Name=Widgetizr
 Comment=Desktop widgets for Linux
 Exec=$LAUNCHER
+Icon=$ICON_FILE
 Type=Application
 Categories=Utility;
 StartupNotify=false
