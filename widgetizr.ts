@@ -12,7 +12,7 @@ import POLYFILL_SOURCE from "./file-api-polyfill.js" with { type: "text" };
 
 declare const POLYFILL_SOURCE: string;
 
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.0.1";
 const WIDGETS_DIR = GLib.build_filenamev([
   GLib.get_user_data_dir(),
   "widgetizr",
