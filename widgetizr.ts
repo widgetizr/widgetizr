@@ -1705,15 +1705,19 @@ const WidgetWindow = GObject.registerClass(
       view.connect("create", (_wv, navigationAction) => {
         const uri = navigationAction.get_request().get_uri();
         console.log(`[create] window.open intercepted, uri=${uri}`);
-        GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
-          console.log(`[create] launching externally: ${uri}`);
-          try {
-            Gio.AppInfo.launch_default_for_uri(uri, null);
-          } catch (e) {
-            console.log(`[create] launch_default_for_uri failed: ${e}`);
-          }
-          return GLib.SOURCE_REMOVE;
-        });
+        if (uri && uri !== "about:blank" && !uri.startsWith("about:")) {
+          GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+            console.log(`[create] launching externally: ${uri}`);
+            try {
+              Gio.AppInfo.launch_default_for_uri(uri, null);
+            } catch (e) {
+              console.log(`[create] launch_default_for_uri failed: ${e}`);
+            }
+            return GLib.SOURCE_REMOVE;
+          });
+        } else {
+          console.log(`[create] ignoring about:blank or empty URI`);
+        }
         return null;
       });
       view.connect("context-menu", () => true);
@@ -1729,6 +1733,24 @@ const WidgetWindow = GObject.registerClass(
         const typeName =
           decisionTypeNames[decisionType] ?? `UNKNOWN(${decisionType})`;
         console.log(`[decide-policy] fired, decisionType=${typeName}`);
+
+        if (decisionType === WebKit2.PolicyDecisionType.NEW_WINDOW_ACTION) {
+          const navDecisionNW = decision as WebKit2.NavigationPolicyDecision;
+          const nwUri = navDecisionNW.get_navigation_action().get_request().get_uri();
+          console.log(`[decide-policy] NEW_WINDOW_ACTION uri=${nwUri}`);
+          navDecisionNW.ignore();
+          if (nwUri && !nwUri.startsWith("about:")) {
+            GLib.idle_add(GLib.PRIORITY_DEFAULT, () => {
+              try {
+                Gio.AppInfo.launch_default_for_uri(nwUri, null);
+              } catch (e) {
+                console.log(`[decide-policy] launch_default_for_uri failed: ${e}`);
+              }
+              return GLib.SOURCE_REMOVE;
+            });
+          }
+          return true;
+        }
 
         if (decisionType !== WebKit2.PolicyDecisionType.NAVIGATION_ACTION) {
           console.log(`[decide-policy] unhandled type, returning false`);
@@ -1746,6 +1768,12 @@ const WidgetWindow = GObject.registerClass(
         console.log(
           `[decide-policy] NAVIGATION_ACTION uri=${newUri} navType=${navType}`,
         );
+
+        if (newUri === "about:blank" || newUri.startsWith("about:")) {
+          console.log(`[decide-policy] blocking about: navigation`);
+          navDecision.ignore();
+          return true;
+        }
 
         const isWebUri =
           newUri.startsWith("http://") ||
