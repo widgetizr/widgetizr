@@ -244,6 +244,68 @@
       let dirHandle = null;
       let observer = null;
 
+      // ── Undo/Redo ─────────────────────────────────────────────────────────────
+      const undoStacks = new Map();
+      let snapshotTimer = null;
+
+      function getUndoStack(id) {
+        if (!undoStacks.has(id)) undoStacks.set(id, { past: [], future: [] });
+        return undoStacks.get(id);
+      }
+
+      function snapshotNow() {
+        if (!activeId) return;
+        const snap = {
+          v: noteBody.value,
+          s: noteBody.selectionStart,
+          e: noteBody.selectionEnd,
+        };
+        const stack = getUndoStack(activeId);
+        if (
+          !stack.past.length ||
+          stack.past[stack.past.length - 1].v !== snap.v
+        ) {
+          stack.past.push(snap);
+          stack.future = [];
+          if (stack.past.length > 200) stack.past.shift();
+        }
+      }
+
+      function scheduleSnapshot() {
+        clearTimeout(snapshotTimer);
+        snapshotTimer = setTimeout(snapshotNow, 600);
+      }
+
+      function applySnapshot(snap) {
+        noteBody.value = snap.v;
+        try {
+          noteBody.setSelectionRange(snap.s, snap.e);
+        } catch (_) {}
+        if (activeId && store[activeId]) store[activeId].body = snap.v;
+        scheduleSave();
+        updateWordCount();
+      }
+
+      function undoBody() {
+        if (!activeId) return;
+        snapshotNow();
+        clearTimeout(snapshotTimer);
+        const stack = getUndoStack(activeId);
+        if (stack.past.length < 2) return;
+        const current = stack.past.pop();
+        stack.future.push(current);
+        applySnapshot(stack.past[stack.past.length - 1]);
+      }
+
+      function redoBody() {
+        if (!activeId) return;
+        const stack = getUndoStack(activeId);
+        if (!stack.future.length) return;
+        const next = stack.future.pop();
+        stack.past.push(next);
+        applySnapshot(next);
+      }
+
       const MAX_FILES = 1000;
       let fileLimitReached = false;
 
@@ -472,6 +534,9 @@
         const ext = noteExtension(id.split("/").pop());
         noteTitle.value = id.slice(0, -ext.length);
         noteBody.value = store[id].body || "";
+        const _us = getUndoStack(id);
+        if (!_us.past.length)
+          _us.past.push({ v: store[id].body || "", s: 0, e: 0 });
         noteTitle.disabled = false;
         noteBody.disabled = false;
         btnDelete.disabled = false;
@@ -538,6 +603,10 @@
           };
           delete store[oldId];
           activeId = newRelFilename;
+          if (undoStacks.has(oldId)) {
+            undoStacks.set(newRelFilename, undoStacks.get(oldId));
+            undoStacks.delete(oldId);
+          }
           noteTitle.value = newSafePath;
           rebuildSelect();
           markSaved();
@@ -747,6 +816,11 @@
             try {
               noteBody.setSelectionRange(pos, pos);
             } catch (_) {}
+            const _us = getUndoStack(relPath);
+            if (!_us.past.length || _us.past[_us.past.length - 1].v !== body) {
+              _us.past.push({ v: body, s: pos, e: pos });
+              _us.future = [];
+            }
             markSaved();
           }
         } catch (_) {}
@@ -828,7 +902,9 @@
               : dirHandle;
           await parentHandle.removeEntry(filename);
         } catch (_) {}
-        delete store[activeId];
+        const deletedId = activeId;
+        delete store[deletedId];
+        undoStacks.delete(deletedId);
         activeId = sortedIds()[0] || null;
         rebuildSelect();
         loadNote(activeId);
@@ -843,8 +919,21 @@
       // ── Editor events ─────────────────────────────────────────────────────────
       noteTitle.addEventListener("input", scheduleSave);
       noteBody.addEventListener("input", () => {
+        scheduleSnapshot();
         scheduleSave();
         updateWordCount();
+      });
+      noteBody.addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key === "z") {
+          e.preventDefault();
+          undoBody();
+        } else if (
+          (e.ctrlKey || e.metaKey) &&
+          (e.key === "y" || (e.shiftKey && e.key === "z"))
+        ) {
+          e.preventDefault();
+          redoBody();
+        }
       });
       noteSelect.addEventListener("change", () => {
         if (isDirty) commitSave();
