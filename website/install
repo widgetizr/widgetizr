@@ -63,6 +63,7 @@ mv "$VERSION_FILE.new" "$VERSION_FILE"
 mkdir -p "$BIN_DIR"
 cat > "$LAUNCHER.new" << EOF
 #!/bin/sh
+export WEBKIT_DISABLE_COMPOSITING_MODE=1
 if command -v gjs > /dev/null 2>&1; then
     exec gjs -m "$DATA_DIR/widgetizr.js" "\$@"
 elif command -v cjs > /dev/null 2>&1; then

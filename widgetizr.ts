@@ -2713,6 +2713,8 @@ function runBackgroundUpdate(): void {
 // ─── Entry point ──────────────────────────────────────────────────────────────
 
 function main(): void {
+  GLib.setenv("WEBKIT_DISABLE_COMPOSITING_MODE", "1", true);
+
   Gtk.init(null);
 
   if (!checkSessionType()) {
