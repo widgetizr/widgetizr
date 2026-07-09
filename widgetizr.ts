@@ -1392,11 +1392,7 @@ const WidgetWindow = GObject.registerClass(
     private mainBox!: Gtk.Box;
     private config: WidgetConfig;
     private manager: WidgetManager;
-    private isDragging = false;
-    private dragStartX = 0;
-    private dragStartY = 0;
-    private windowStartX = 0;
-    private windowStartY = 0;
+    private _saveTimeoutId = 0;
     private isResizing = false;
     private resizeStartX = 0;
     private resizeStartY = 0;
@@ -1511,36 +1507,9 @@ const WidgetWindow = GObject.registerClass(
         if (ok && button === 1) {
           const [coordOk, x, y] = evt.get_root_coords();
           if (coordOk) {
-            this.isDragging = true;
-            this.dragStartX = x;
-            this.dragStartY = y;
-            const [wx, wy] = this.get_position();
-            this.windowStartX = wx;
-            this.windowStartY = wy;
+            this.begin_move_drag(button, x, y, evt.get_time());
             return true;
           }
-        }
-        return false;
-      });
-
-      headerEventBox.connect("motion-notify-event", (_w, event) => {
-        if (this.isDragging) {
-          const evt = event as any;
-          const [ok, x, y] = evt.get_root_coords();
-          if (ok) {
-            this.move(
-              this.windowStartX + (x - this.dragStartX),
-              this.windowStartY + (y - this.dragStartY),
-            );
-          }
-        }
-        return false;
-      });
-
-      headerEventBox.connect("button-release-event", () => {
-        if (this.isDragging) {
-          this.isDragging = false;
-          this.manager.saveAll();
         }
         return false;
       });
@@ -1660,6 +1629,12 @@ const WidgetWindow = GObject.registerClass(
         this.config.height = h;
         this.config.posX = x;
         this.config.posY = y;
+        if (this._saveTimeoutId) GLib.source_remove(this._saveTimeoutId);
+        this._saveTimeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 500, () => {
+          this._saveTimeoutId = 0;
+          this.manager.saveAll();
+          return GLib.SOURCE_REMOVE;
+        });
         return false;
       });
     }
