@@ -1653,6 +1653,29 @@ const WidgetWindow = GObject.registerClass(
         return false;
       });
 
+      this.connect("key-press-event", (_w, event) => {
+        const evt = event as any;
+        const keyval = evt.get_keyval()[1];
+        const state = evt.get_state()[1];
+        const isCtrl = (state & Gdk.ModifierType.CONTROL_MASK) !== 0;
+        if (isCtrl) {
+          const zoom = this.webView.get_zoom_level();
+          if (keyval === Gdk.KEY_plus || keyval === Gdk.KEY_KP_Add) {
+            this.webView.set_zoom_level(zoom * 1.1);
+            return true;
+          }
+          if (keyval === Gdk.KEY_minus || keyval === Gdk.KEY_KP_Subtract) {
+            this.webView.set_zoom_level(zoom * 0.9);
+            return true;
+          }
+          if (keyval === Gdk.KEY_0) {
+            this.webView.set_zoom_level(1.0);
+            return true;
+          }
+        }
+        return false;
+      });
+
       this.connect("configure-event", () => {
         const [w, h] = this.get_size();
         const [x, y] = this.get_position();
